@@ -1,6 +1,3 @@
-// import request from 'request';
-// import cheerio from 'cheerio';
-
 const request = require('request');
 const cheerio = require('cheerio');
 
@@ -22,25 +19,18 @@ const getAdRefs = ($, ads) => {
   }).get();
 };
 
-const olx = ({ rootPath = 'https://www.olx.ua/', path, url = `${rootPath}${path}`, adRefs = [], i }) => {
-
+const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   return new Promise((resolve, reject) => {
+    const url = `${rootPath}${path}${page ? `?page=${page}`: ''}`;
     request(url, (err, res, html) => {
       if (err) reject(err);
-
       const $ = cheerio.load(html);
-      const ads = i && $('.listHandler table#offers_table tr.wrap a.thumb')
-        || $('.listHandler table tr.wrap a.thumb');
-      adRefs.push(getAdRefs($, ads));
-      const promises = [];
-      // if (!i) {
-      //   let i = 2;
-      //   const pages = $('.pager .item').length;
-      //   while (i <= pages) {
-      //     promises.push(olx({ path, url: `${url}?page=${i}`, adRefs, i }));
-      //     i++;
-      //   }
-      // }
+      const ads = $(`.listHandler table${page ? '#offers_table' : ''} tr.wrap a.thumb`);
+      const adRefs = getAdRefs($, ads);
+      if (!page) {
+        const pages = $('.pager .item').length;
+        if (pages >= 2) resolve({ adRefs, pages })
+      }
       resolve(adRefs);
     });
   });

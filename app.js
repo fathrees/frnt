@@ -1,9 +1,6 @@
-// import express from 'express';
-// import { olx, categories } from './olx/olx';
-// const bodyParser = require('body-parser');
-
 const { olx, categories } = require( './olx/olx');
 const express = require('express');
+const _ = require('lodash');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,10 +11,17 @@ app.get('/olx/realtyRentFlatLong/:city', (req, res) => {
   const longTherm = rentFlat['longTherm'];
   const city = req.params.city;
   const path = `${realty.path}${rentFlat.path}${longTherm.path}${city}`;
-  olx({ path }).then((adRefs) => {
-    res.send({ adRefs });
+  const promises = []; 
+  olx({ path }).then((resolveObj) => {
+  	for (let page = 2; page <= resolveObj.pages; page++) {
+  		promises.push(olx({ path, page }));	
+  	}
+  	Promise.all(promises).then((resolvesArr) => {
+  		const allAdRefs = resolveObj.adRefs.concat(_.flatten(resolvesArr));
+  		res.send(allAdRefs);
+  	});
   }).catch((e) => res.send(e));
-});
+}); 
 
 app.listen(`${port}`);
 console.log(`Server up on port ${port}`);
