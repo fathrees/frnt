@@ -40,6 +40,7 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
 const getPhone = (userId) => {
   return new Promise((resolve, reject) => {
     request(`https://www.olx.ua/ajax/misc/contact/phone/${userId}`, (err, res, body) => {
+      console.log(res);
       if (err) reject(err);
       resolve(body.value);
     });

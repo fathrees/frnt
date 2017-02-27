@@ -6,11 +6,20 @@ const Ad = mongoose.model('Ad', {
     required: true,
     minlength: 1,
   },
-  phone: {
+});
+
+const User = mongoose.model('User', {
+  _id: {
     type: String,
     required: true,
+  },
+  ads: {
+    type: Array,
+  },
+  phone: {
+    type: String,
     trim: true,
   },
 });
 
-module.exports = { Ad };
+module.exports = { Ad, User };
