@@ -26,18 +26,31 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
       if (err) reject(err);
       const $ = cheerio.load(html);
       const ads = $(`.listHandler table${page ? '#offers_table' : ''} tr.wrap a.thumb`);
-      const adRefs = getAdRefs($, ads);
+      let adRefs = getAdRefs($, ads);
+      const cleanedAdRefs = adRefs.map((ref) => ref.replace(/.html#.+$/, '.html'));
       if (!page) {
         const pages = $('.pager .item').length;
-        if (pages >= 2) resolve({ adRefs, pages })
+        if (pages >= 2) resolve({ cleanedAdRefs, pages })
       }
-      resolve(adRefs);
+      resolve(cleanedAdRefs);
     });
   });
 };
 
+const getPhone = (userId) => {
+  return new Promise((resolve, reject) => {
+    request(`https://www.olx.ua/ajax/misc/contact/phone/${userId}`, (err, res, body) => {
+      if (err) reject(err);
+      resolve(body.value);
+    });
+  });
+};
 
 module.exports = {
   categories,
   olx,
+  getPhone,
 };
+
+//https://www.olx.ua/ajax/misc/contact/phone/qGRvE/
+//https://www.olx.ua/ajax/misc/contact/desc/qGRvE/
