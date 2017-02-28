@@ -25,7 +25,7 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
     request(url, (err, res, html) => {
       if (err) reject(err);
       const $ = cheerio.load(html);
-      const ads = $(`.listHandler table${page ? '#offers_table' : ''} tr.wrap a.thumb`);
+      const ads = $(`.listHandler table${page ? '#offers_table' : ''} tr.wrap a.thumb`);//todo check for "server banned" page and throw err instead "No new ads"
       let adRefs = getAdRefs($, ads);
       const cleanedAdRefs = adRefs.map((ref) => ref.replace(/.html#.+$/, '.html'));
       if (!page) {
@@ -37,12 +37,16 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   });
 };
 
-const getPhone = (userId) => {
+const getPhone = (olxAdId) => {
   return new Promise((resolve, reject) => {
-    request(`https://www.olx.ua/ajax/misc/contact/phone/${userId}`, (err, res, body) => {
-      console.log(res);
+    request({
+      url: `https://www.olx.ua/ajax/misc/contact/phone/${olxAdId}`,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+      },
+    }, (err, res, body) => {
       if (err) reject(err);
-      resolve(body.value);
+      resolve(JSON.parse(body).value); //todo throw err if body is html => server banned; needs to decrement frequency of request
     });
   });
 };
@@ -53,5 +57,4 @@ module.exports = {
   getPhone,
 };
 
-//https://www.olx.ua/ajax/misc/contact/phone/qGRvE/
 //https://www.olx.ua/ajax/misc/contact/desc/qGRvE/
