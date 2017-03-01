@@ -6,6 +6,10 @@ const Ad = mongoose.model('Ad', {
     required: true,
     minlength: 1,
   },
+  phone: {
+    type: String,
+    trim: true,
+  },
 });
 
 const User = mongoose.model('User', {
@@ -15,10 +19,6 @@ const User = mongoose.model('User', {
   },
   ads: {
     type: Array,
-  },
-  phone: {
-    type: String,
-    trim: true,
   },
 });
 

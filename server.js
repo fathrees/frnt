@@ -3,16 +3,19 @@ const _ = require('lodash');
 
 const { mongoose } = require('./db/mongoose');
 const { Ad, User } = require('./db/models');
-const { olx, categories, getPhone } = require( './olx/olx');
+const { olx, categories, getPhones } = require( './olx/olx');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
+  console.log('Gathering new ads started...');
   const path = getPath(req.params.city);
   const promises = [];
   olx({ path }).then((resolveObj) => {
+    console.log('Scanning page 1...');
     for (let page = 2; page <= resolveObj.pages; page++) {
+      console.log(`Scanning page ${page}`);
       promises.push(olx({ path, page }));
     }
     let allAdRefs;
@@ -30,7 +33,7 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
 
-const getPath = (city) => { //todo separate funcs to other file
+const getPath = (city) => { //todo separate funcs to other file?
   const realty = categories['realty'];
   const rentFlat = realty['rentFlat'];
   const longTherm = rentFlat['longTherm'];
@@ -44,19 +47,19 @@ const getAdIdFromRef = (ref) => {
 };
 
 const insertBatchNewAds = (newAdRefs, cb) => {
-  const newAdObjs = newAdRefs.map(ref => {
+  const newAdObjs = newAdRefs.map((ref) => {
     const olxAdId = getAdIdFromRef(ref);
     if (!olxAdId) {
       console.log(`'${ref}' doesn't has ID, check source of Olx`);
       return { ref };
     }
-    const promisePhone = getPhone(olxAdId);
+    const promisePhone = getPhones(olxAdId);
     return { ref, promisePhone};
   });
-  Promise.all(newAdObjs.map((ad) => ad.promisePhone)).then((phones) => {
-    const batchAds = phones.map((phone, i) => ({
+  Promise.all(newAdObjs.map((ad) => ad.promisePhone)).then((phoneArrs) => {
+    const batchAds = phoneArrs.map((phones, i) => ({
       ref: newAdObjs[i].ref,
-      phone,
+      phones,
     }));
     Ad.collection.insert(batchAds, cb);
   }).catch((e) => cb(e));
@@ -66,10 +69,26 @@ const insertNewAds = (receivedAdRefs, response) => {
   Ad.find().then((ads) => {
     const newAdRefs = _.difference(receivedAdRefs, ads.map(ad => ad.ref));
     if (newAdRefs.length) {
-      insertBatchNewAds(newAdRefs, (err, res) => {
-        console.log(err || `${res.insertedCount} new ads were successfully stored`);
-        if (err) response.send({ err });
-        else response.send(res.ops);
+      const adPerBatch = 30;
+      const batches = _.chunk(newAdRefs, adPerBatch);
+      let insertedAds = [];
+      let wasErr;
+      batches.forEach((batch, i) => {
+        const delay = (i && 600000) || 0;
+        setTimeout(() => {
+          insertBatchNewAds(batch, (err, res) => {
+            console.log(err || `${res.insertedCount} new ads were successfully stored`);
+            if (!wasErr) {
+              if (err) {
+                response.send(err);
+                wasErr = true;
+              } else {
+                insertedAds = insertedAds.concat(res.ops);
+                if (insertedAds.length === newAdRefs.length) response.send(insertedAds);
+              }
+            }
+          });
+        }, delay);
       });
     } else {
       console.log('No new ads');
