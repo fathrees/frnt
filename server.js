@@ -1,6 +1,7 @@
 const express = require('express');
 const timeout = require('connect-timeout');
 const _ = require('lodash');
+const { ObjectID } = require('mongodb');
 
 const { mongoose } = require('./db/mongoose');
 const { Ad, User } = require('./db/models');
@@ -34,6 +35,13 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
       insertNewAds(receivedAdRefs, response);
     }
   }).catch((e) => response.send(e));
+});
+
+app.get('/groupAdsByUserPhones', (req, response) => {
+  Ad.find().then((ads) => {
+    const ungroupedAds = _.clone(ads);
+    groupAdsByUserPhones(ungroupedAds, response);
+  }).catch((e) => console.log(e));
 });
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
@@ -103,4 +111,24 @@ const getAdIdFromRef = (ref) => {
   const asIdRegex = new RegExp(/-ID(.+)\.html$/);
   const match = ref.match(asIdRegex);
   return match && match[1] || null;
+};
+
+const groupAdsByUserPhones = (ungroupedAds, response) => {
+  const phonesForSearch = ungroupedAds[0].phones;
+  const foundAds = ungroupedAds.filter((ad) => _.intersection(ad.phones, phonesForSearch).length > 0);
+  User.findOne({ phones: { $in: phonesForSearch } })
+    .then((res) => {
+      User.update(
+        { _id: (res && res._id) || new ObjectID()},
+        { $set: {
+            phones: _.union((res && res.phones) || [], phonesForSearch),
+            ads: _.union((res && res.adIds) || [], foundAds.map(({_id}) => _id)),
+        }},
+        { upsert: true }
+      ).then(() => {
+        _.pullAll(ungroupedAds, foundAds);
+        if (ungroupedAds.length) groupAdsByUserPhones(ungroupedAds, response);
+        else User.find().then((users) => response.send(users)).catch((e) => response.send(e));
+      }).catch((e) => console.log(e))
+    }).catch((e) => console.log(e));
 };

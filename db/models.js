@@ -6,16 +6,14 @@ const Ad = mongoose.model('Ad', {
     required: true,
     minlength: 1,
   },
-  phone: {
-    type: String,
-    trim: true,
+  phones: {
+    type: Array,
   },
 });
 
 const User = mongoose.model('User', {
-  _id: {
-    type: String,
-    required: true,
+  phones: {
+    type: Array,
   },
   ads: {
     type: Array,

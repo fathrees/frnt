@@ -53,7 +53,7 @@ const getPhones = (olxAdId) => {
           reject('Server banned');
         } else if (res.headers['content-type'] === 'text/html; charset=utf-8') {
           console.log(`Request for phone of olxAdId = ${olxAdId} had error`);
-          resolve(null);
+          resolve([null]);
         } else {
           const phonesStr = JSON.parse(body).value;
           const phones = parsePhones(phonesStr);
@@ -84,4 +84,5 @@ module.exports = {
   getPhones,
 };
 
-//https://www.olx.ua/ajax/misc/contact/desc/qGRvE/
+//https://www.olx.ua/ajax/misc/contact/desc/{adId}/ - get nums from ad description
+//https://www.olx.ua/ajax/misc/contact/phone/{adId}/white/ todo if not find witout 'white'
