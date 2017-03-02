@@ -13,12 +13,6 @@ const categories = {
   },
 };
 
-const getAdRefs = ($, ads) => {
-  return ads.map(function() {
-    return $(this).attr('href');
-  }).get();
-};
-
 const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   return new Promise((resolve, reject) => {
     const url = `${rootPath}${path}${page ? `?page=${page}`: ''}`;
@@ -26,11 +20,10 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
       if (err) reject(err);
       if (res && res.statusCode === 403) {
         reject('Server banned');
-        return null;
       }
       const $ = cheerio.load(html);
-      const ads = $(`.listHandler table${page ? '#offers_table' : ''} tr.wrap a.thumb`)
-      let adRefs = getAdRefs($, ads);
+      const ads = $('.listHandler table tr.wrap a.thumb');
+      let adRefs = getAdRefs(ads);
       const cleanedAdRefs = adRefs.map((ref) => ref.replace(/.html#.+$/, '.html'));
       if (!page) {
         const pages = $('.pager .item').length;
@@ -41,24 +34,32 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   });
 };
 
+const getAdRefs = (ads) => {
+  const $ = cheerio;
+  return ads.map(function() {
+    return $(this).attr('href');
+  }).get();
+};
+
 const getPhones = (olxAdId) => {
   return new Promise((resolve, reject) => {
     request({
       url: `https://www.olx.ua/ajax/misc/contact/phone/${olxAdId}`,
       headers: {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-      }}, (err, res, body) => {
-      if (res && res.statusCode === 403) {
-        reject('Server banned');
-      } else if (res.headers['content-type'] === 'text/html; charset=utf-8') {
-        console.log(`Request for phone of olxAdId = ${olxAdId} had error`);
-        resolve(null);
-      } else {
-        const phonesStr = JSON.parse(body).value;
-        const phones = parsePhones(phonesStr);
-        resolve(phones);
-      }
-    });
+      }},
+      (err, res, body) => {
+        if (res && res.statusCode === 403) {
+          reject('Server banned');
+        } else if (res.headers['content-type'] === 'text/html; charset=utf-8') {
+          console.log(`Request for phone of olxAdId = ${olxAdId} had error`);
+          resolve(null);
+        } else {
+          const phonesStr = JSON.parse(body).value;
+          const phones = parsePhones(phonesStr);
+          resolve(phones);
+        }
+      });
   });
 };
 
