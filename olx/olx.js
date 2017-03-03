@@ -85,4 +85,4 @@ module.exports = {
 };
 
 //https://www.olx.ua/ajax/misc/contact/desc/{adId}/ - get nums from ad description
-//https://www.olx.ua/ajax/misc/contact/phone/{adId}/white/ todo if not find witout 'white'
+//https://www.olx.ua/ajax/misc/contact/phone/{adId}/ -get phones from "show phone" btn

@@ -40,7 +40,7 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
 app.get('/groupAdsByUserPhones', (req, response) => {
   Ad.find().then((ads) => {
     const ungroupedAds = _.clone(ads);
-    groupAdsByUserPhones(ungroupedAds, response);
+    groupAdsByUserPhones(ungroupedAds, response, null, { n: 0, nModified: 0 });
   }).catch((e) => console.log(e));
 });
 
@@ -103,7 +103,10 @@ const insertBatchNewAds = (batchAdRefs, cb) => {
         ref: newAdObjs[i].ref,
         phones,
       }));
-      Ad.collection.insert(batchAds, cb);
+      groupAdsByUserPhones(_.clone(batchAds), undefined, (msg) => {
+        console.log(msg);
+        Ad.collection.insert(batchAds, cb);
+      }, { n: 0, nModified: 0 });
     }).catch((e) => cb(e));
 };
 
@@ -113,22 +116,27 @@ const getAdIdFromRef = (ref) => {
   return match && match[1] || null;
 };
 
-const groupAdsByUserPhones = (ungroupedAds, response) => {
+const groupAdsByUserPhones = (ungroupedAds, response, cb, nUpsertedUsers) => {
   const phonesForSearch = ungroupedAds[0].phones;
   const foundAds = ungroupedAds.filter((ad) => _.intersection(ad.phones, phonesForSearch).length > 0);
+  let { n, nModified } = nUpsertedUsers;
+  const msg = `${n} users created\n${nModified} users updated`;
   User.findOne({ phones: { $in: phonesForSearch } })
     .then((res) => {
       User.update(
         { _id: (res && res._id) || new ObjectID()},
         { $set: {
             phones: _.union((res && res.phones) || [], phonesForSearch),
-            ads: _.union((res && res.adIds) || [], foundAds.map(({_id}) => _id)),
+            ads: _.union((res && res.adIds) || [], foundAds.map(({ ref }) => ref)),
         }},
         { upsert: true }
-      ).then(() => {
+      ).then((res1) => {
+        nModified += res1.nModified;
+        n += res1.n - res1.nModified;
         _.pullAll(ungroupedAds, foundAds);
-        if (ungroupedAds.length) groupAdsByUserPhones(ungroupedAds, response);
-        else User.find().then((users) => response.send(users)).catch((e) => response.send(e));
+        if (ungroupedAds.length) groupAdsByUserPhones(ungroupedAds, response, cb, { n, nModified });
+        else if (response) User.find().then((users) => response.send(users)).catch((e) => response.send(e));
+        else cb(msg);
       }).catch((e) => console.log(e))
     }).catch((e) => console.log(e));
 };
