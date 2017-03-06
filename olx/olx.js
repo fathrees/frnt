@@ -16,21 +16,33 @@ const categories = {
 const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   return new Promise((resolve, reject) => {
     const url = `${rootPath}${path}${page ? `?page=${page}`: ''}`;
-    request(url, (err, res, html) => {
-      if (err) reject(err);
-      if (res && res.statusCode === 403) {
-        reject('Server banned');
-      }
-      const $ = cheerio.load(html);
-      const ads = $('.listHandler table tr.wrap a.thumb');
-      let adRefs = getAdRefs(ads);
-      const cleanedAdRefs = adRefs.map((ref) => ref.replace(/.html#.+$/, '.html'));
-      if (!page) {
-        const pages = $('.pager .item').length;
-        if (pages >= 2) resolve({ cleanedAdRefs, pages })
-      }
-      resolve(cleanedAdRefs);
-    });
+    tryOlxAdsRequest(url, resolve, reject, page);
+  });
+};
+
+const tryOlxAdsRequest = (url, resolve, reject, page) => {
+  request(url, (err, res, html) => {
+    if (err) {
+      reject(err);
+      return null;
+    }
+    if (res && res.statusCode === 403) {
+      reject('Server banned by Olx :( Change code to prevent ban or try 10 min later');
+      return null;
+    }
+    if (!html) {
+      tryOlxAdsRequest(url, resolve, reject, page);
+      return null;
+    }
+    const $ = cheerio.load(html);
+    const ads = $('.listHandler table tr.wrap a.thumb');
+    const adRefs = getAdRefs(ads);
+    const cleanedAdRefs = adRefs.map((ref) => ref.replace(/.html#.+$/, '.html'));
+    if (!page) {
+      const pages = $('.pager .item').length;
+      if (pages >= 2) resolve({ cleanedAdRefs, pages });
+    }
+    resolve(cleanedAdRefs);
   });
 };
 
@@ -41,7 +53,7 @@ const getAdRefs = (ads) => {
   }).get();
 };
 
-const getPhones = (olxAdId) => {
+const getPhones = (olxAdId, i) => {
   return new Promise((resolve, reject) => {
     request({
       url: `https://www.olx.ua/ajax/misc/contact/phone/${olxAdId}`,
@@ -50,9 +62,9 @@ const getPhones = (olxAdId) => {
       }},
       (err, res, body) => {
         if (res && res.statusCode === 403) {
-          reject('Server banned');
+          reject(`Server banned by Olx on getting phone of ${i + 1} ad (olxAdId: ${olxAdId}). Change code to prevent ban or try 10 min later`);
         } else if (res.headers['content-type'] === 'text/html; charset=utf-8') {
-          console.log(`Request for phone of olxAdId = ${olxAdId} had error`);
+          console.log(`Request for phone of ad (id: ${olxAdId}) had error`);
           resolve([null]);
         } else {
           const phonesStr = JSON.parse(body).value;
