@@ -7,30 +7,36 @@ const { mongoose } = require('./db/mongoose');
 const { Ad, User } = require('./db/models');
 const { olx, categories, getPhones } = require( './olx/olx');
 
-const olxScrapTimeout = 3000000; // msec
+const olxScrapTimeout = 3000000;// msec
 const adsPerBatch = 10;// todo move to constants.js separated file
 const batchDelay = 60000;// msec
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// app.use(timeout(olxScrapTimeout));
+app.use(timeout(olxScrapTimeout));
+
+let isRequestSent = false; // needs to resolve issue below
 
 app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
-  const keepAliveOps = `timeout=${olxScrapTimeout/1000}, max=1`;
-  req.headers['Keep-Alive'] = keepAliveOps;
-  req.headers['Connection'] = 'Keep-Alive';
-  response.append('Keep-Alive', keepAliveOps);
-  response.append('Connection', 'Keep-Alive');
-  console.log('Gathering new ads started...');
-  const path = getPath(req.params.city);
-  const promises = [];
-  olx({ path })
+  // const keepAliveOps = `timeout=${olxScrapTimeout/1000}, max=1`; ////////////////////////////////////////////////////////////////////////////////////////
+  // req.headers['Connection'] = 'Keep-Alive';
+  // req.headers['Keep-Alive'] = keepAliveOps;
+  // response.set({                                                 Doesn't help to prevent request repeating by browser while it is waiting for response
+  //   'Connection': 'Keep-Alive',                                  Similar to express.js bug https://github.com/expressjs/express/issues/2121
+  //   'Keep-Alive': keepAliveOps,                                  (using response inside local setTimeout (79:1))
+  // }); ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  if (!isRequestSent) {
+    isRequestSent = true;
+    console.log('Gathering new ads started...');
+    const path = getPath(req.params.city);
+    const promises = [];
+    olx({path})
     .then((resolveObj) => {
-      console.log('Scanning page 1');
+      console.log(`Scanning page 1/${resolveObj.pages || 1}`);
       for (let page = 2; page <= resolveObj.pages; page++) {
-        console.log(`Scanning page ${page}`);
-        promises.push(olx({ path, page }));
+        console.log(`Scanning page ${page}/${resolveObj.pages}`);
+        promises.push(olx({path, page}));
       }
       let receivedAdRefs;
       if (promises.length) {
@@ -44,13 +50,24 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
         insertNewAds(receivedAdRefs, response);
       }
     }).catch((e) => response.send(e));
+  }
 });
 
 app.get('/groupAdsByUserPhones', (req, response) => {
   Ad.find().then((ads) => {
     const ungroupedAds = _.clone(ads);
-    groupAdsByUserPhones(ungroupedAds, response, null, { n: 0, nModified: 0 });
+    groupAdsByUserPhones(ungroupedAds, response);
   }).catch((e) => console.log(e));
+});
+
+app.get('/sortUsers/:sortBy', (req, response) => {
+  const sortBy = req.params.sortBy;
+  if (sortBy === 'adsCount') {
+    User.find().sort('adsCount')
+      .then((res) => {
+        response.send(res);
+      }).catch((e) => response.send(e));
+  }
 });
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
@@ -88,6 +105,7 @@ const insertNewAds = (receivedAdRefs, response) => {
               if (insertedAds.length === newAdRefs.length) {
                 response.send(insertedAds);
                 response.end();
+                console.log(`All new ads (${insertedAds.length}) from Olx (${ads.length}) were successfully stored`);
               }
             }
           });
@@ -102,13 +120,13 @@ const insertNewAds = (receivedAdRefs, response) => {
 
 const insertBatchNewAds = (batchAdRefs, i, cb) => {
   console.log(`${i + 1} batch is parsing... It will take ${batchDelay/60000} min to prevent Olx ban ;)`);
-  const newAdObjs = batchAdRefs.map((ref, i) => {
+  const newAdObjs = batchAdRefs.map((ref) => {
     const olxAdId = getAdIdFromRef(ref);
     if (!olxAdId) {
       console.log(`'${ref}' doesn't has ID, check source of Olx`);
       return { ref };
     }
-    const promisePhones = getPhones(olxAdId, i);
+    const promisePhones = getPhones(olxAdId);
     return { ref, promisePhones};
   });
   Promise.all(newAdObjs.map((ad) => ad.promisePhones))
@@ -120,7 +138,7 @@ const insertBatchNewAds = (batchAdRefs, i, cb) => {
       groupAdsByUserPhones(_.clone(batchAds), undefined, (msg) => {
         console.log(msg);
         Ad.collection.insert(batchAds, cb);
-      }, { n: 0, nModified: 0 });
+      });
     }).catch((e) => cb(e));
 };
 
@@ -130,27 +148,26 @@ const getAdIdFromRef = (ref) => {
   return match && match[1] || null;
 };
 
-const groupAdsByUserPhones = (ungroupedAds, response, cb, nUpsertedUsers) => {
+const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
   const phonesForSearch = ungroupedAds[0].phones;
   const foundAds = ungroupedAds.filter((ad) => _.intersection(ad.phones, phonesForSearch).length > 0);
-  let { n, nModified } = nUpsertedUsers;
-  const msg = `${n} users created\n${nModified} users updated`;
   User.findOne({ phones: { $in: phonesForSearch } })
     .then((res) => {
-      User.update(
-        { _id: (res && res._id) || new ObjectID()},
-        { $set: {
-            phones: _.union((res && res.phones) || [], phonesForSearch),
-            ads: _.union((res && res.adIds) || [], foundAds.map(({ ref }) => ref)),
-        }},
-        { upsert: true }
-      ).then((res1) => {
-        nModified += res1.nModified;
-        n += res1.n - res1.nModified;
-        _.pullAll(ungroupedAds, foundAds);
-        if (ungroupedAds.length) groupAdsByUserPhones(ungroupedAds, response, cb, { n, nModified });
-        else if (response) User.find().then((users) => response.send(users)).catch((e) => response.send(e));
-        else cb(msg);
+      const _id = (res && res._id) || new ObjectID();
+      const ads = _.union((res && res.adIds) || [], foundAds.map(({ ref }) => ref));
+      const phones = _.union((res && res.phones) || [], phonesForSearch);
+      User.update({ _id }, { $set: { phones, ads, adsCount: ads.length } }, { upsert: true })
+        .then(() => {
+          const successMsg = 'Users upserted by grouping ads with similar phones';
+          _.pullAll(ungroupedAds, foundAds);
+          if (ungroupedAds.length) groupAdsByUserPhones(ungroupedAds, response, cb);
+          else if (response) {
+            User.find().sort('adsCount')
+              .then((users) => {
+                response.send(users);
+                console.log(successMsg);
+              }).catch((e) => response.send(e));
+          } else cb(successMsg);
       }).catch((e) => console.log(e))
     }).catch((e) => console.log(e));
 };

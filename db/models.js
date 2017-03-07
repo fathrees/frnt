@@ -18,6 +18,9 @@ const User = mongoose.model('User', {
   ads: {
     type: Array,
   },
+  adsCount: {
+    type: Number,
+  }
 });
 
 module.exports = { Ad, User };

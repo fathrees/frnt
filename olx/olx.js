@@ -53,7 +53,7 @@ const getAdRefs = (ads) => {
   }).get();
 };
 
-const getPhones = (olxAdId, i) => {
+const getPhones = (olxAdId) => {
   return new Promise((resolve, reject) => {
     request({
       url: `https://www.olx.ua/ajax/misc/contact/phone/${olxAdId}`,
@@ -62,9 +62,9 @@ const getPhones = (olxAdId, i) => {
       }},
       (err, res, body) => {
         if (res && res.statusCode === 403) {
-          reject(`Server banned by Olx on getting phone of ${i + 1} ad (olxAdId: ${olxAdId}). Change code to prevent ban or try 10 min later`);
+          reject(`Server banned by Olx on getting phone from ad (olxAdId: ${olxAdId}). Change code to prevent ban or try 10 min later`);
         } else if (res.headers['content-type'] === 'text/html; charset=utf-8') {
-          console.log(`Request for phone of ad (id: ${olxAdId}) had error`);
+          console.log(`Request for phone of ad (olxAdId: ${olxAdId}) had error`);
           resolve([null]);
         } else {
           const phonesStr = JSON.parse(body).value;
