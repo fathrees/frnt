@@ -20,6 +20,39 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   });
 };
 
+const olxFlat = (ad) => {
+  return new Promise((resolve, reject) => {
+    request(ad, (err, res, html) => {
+      if (err) {
+        reject(err);
+        return null;
+      }
+      const $ = cheerio.load(html);
+      const offerDescription = $('div#offerdescription');
+      const titleBox = offerDescription.children('div.offer-titlebox');
+      const title = titleBox.children('h1').text().trim();
+      const createdAt = parseDate(titleBox.find('div.offer-titlebox__details em').text());
+      const descriptionContent = offerDescription.children('div.descriptioncontent').children();
+      const details = descriptionContent.first().children().last().children();
+      const rooms = + details.first().find('table.item strong').text();
+      const wallType = details.last().find('table.item a').text().trim();
+      const description = descriptionContent.last().text().trim();
+      let price = $('.price-label strong').text().trim();
+      const priceValue = + price.replace(/\s/g, '').match(/\d+/);
+      const priceCy = price.replace(/\d|\s|\./g, '');
+      price = { priceValue, priceCy };
+      const flat = { title, createdAt, rooms, wallType, description, price };
+      resolve(flat);
+    });
+  })
+};
+
+const parseDate = (str) => {
+  const date = str.match(/.+(\d{2}:\d{2}),\s+(\d+)\s+(.+)\s+(\d{4}),/);
+  const rusMonths = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  return new Date(`${rusMonths.indexOf(date[3]) + 1}/${date[2]}/${date[4]} ${date[1]}:00`).getTime();
+};
+
 const tryOlxAdsRequest = (url, resolve, reject, page) => {
   request(url, (err, res, html) => {
     if (err) {
@@ -90,11 +123,7 @@ const parsePhones = (phonesStr) => {
 
 const cleanPhone = (phone) => phone.replace(/(\+38|^\s*8|\s|-|\(|\))/g, '');
 
-module.exports = {
-  categories,
-  olx,
-  getPhones,
-};
+module.exports = { categories, olx, getPhones, olxFlat };
 
 //https://www.olx.ua/ajax/misc/contact/desc/{adId}/ - get nums from ad description
 //https://www.olx.ua/ajax/misc/contact/phone/{adId}/ -get phones from "show phone" btn

@@ -4,8 +4,8 @@ const _ = require('lodash');
 const { ObjectID } = require('mongodb');
 
 const { mongoose } = require('./db/mongoose');
-const { Ad, User } = require('./db/models');
-const { olx, categories, getPhones } = require( './olx/olx');
+const { Ad, User, Flat } = require('./db/models');
+const { olx, categories, getPhones, olxFlat } = require( './olx/olx');
 
 const olxScrapTimeout = 3000000;// msec
 const adsPerBatch = 10;// todo move to constants.js separated file
@@ -16,7 +16,7 @@ const port = process.env.PORT || 3000;
 
 app.use(timeout(olxScrapTimeout));
 
-let isRequestSent = false; // needs to resolve issue below
+let isRequestSent = false; // It's needed to resolve issue below
 
 app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
   // const keepAliveOps = `timeout=${olxScrapTimeout/1000}, max=1`; ////////////////////////////////////////////////////////////////////////////////////////
@@ -24,14 +24,16 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
   // req.headers['Keep-Alive'] = keepAliveOps;
   // response.set({                                                 Doesn't help to prevent request repeating by browser while it is waiting for response
   //   'Connection': 'Keep-Alive',                                  Similar to express.js bug https://github.com/expressjs/express/issues/2121
-  //   'Keep-Alive': keepAliveOps,                                  (using response inside local setTimeout (79:1))
-  // }); ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //   'Keep-Alive': keepAliveOps,                                  (using response inside local setTimeout (94:1))
+  // });
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   if (!isRequestSent) {
     isRequestSent = true;
     console.log('Gathering new ads started...');
-    const path = getPath(req.params.city);
+    const city = req.params.city;
+    const path = getPath(city);
     const promises = [];
-    olx({path})
+    olx({ path })
     .then((resolveObj) => {
       console.log(`Scanning page 1/${resolveObj.pages || 1}`);
       for (let page = 2; page <= resolveObj.pages; page++) {
@@ -43,7 +45,7 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
         Promise.all(promises)
         .then((resolvesArr) => {
           receivedAdRefs = _.uniq(resolveObj.cleanedAdRefs.concat(_.flatten(resolvesArr)));
-          insertNewAds(receivedAdRefs, response);
+          insertNewAds(city, receivedAdRefs, response);
         }).catch((e) => response.send(e));
       } else {
         receivedAdRefs = _.uniq(resolveObj);
@@ -53,21 +55,56 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
   }
 });
 
-app.get('/groupAdsByUserPhones', (req, response) => {
+app.get('/upsertUsersByGroupAds', (req, response) => {
   Ad.find().then((ads) => {
     const ungroupedAds = _.clone(ads);
     groupAdsByUserPhones(ungroupedAds, response);
   }).catch((e) => console.log(e));
 });
 
-app.get('/sortUsers/:sortBy', (req, response) => {
-  const sortBy = req.params.sortBy;
-  if (sortBy === 'adsCount') {
-    User.find().sort('adsCount')
-      .then((res) => {
-        response.send(res);
-      }).catch((e) => response.send(e));
-  }
+app.get('/users/:city', (req, response) => {
+  User.find({ city: req.params.city }, { 'ads': true, 'phones': true }, { sort: 'adsCount' })
+    .then((res) => {
+      response.send(res);
+    }).catch((e) => response.send(e));
+});
+
+app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice', (req, response) => {
+  const { city, lowRooms, highRooms, lowPrice, highPrice, } = req.params;
+  const query = {};
+  if (city) query.city = city;
+  query.rooms = { $gte: lowRooms, $lte: highRooms };
+  query.price = { $gte: lowPrice, $lte: highPrice };
+  Flat.find(query, {}, { sort: {'usersCount': 1 } })
+    .then((flats) => {
+      const flatsWithUserPhones = flats.map((flat) => {
+        flat.usersId.forEach((userId) => {
+          const userWithPhones = { userId };
+          User.findById(userId)
+            .then((user) => userWithPhones.phones = user.phones)
+            .catch((e) => console.log(e));
+        });
+      });
+      response.send(flatsWithUserPhones);
+    }).catch((e) => response.send(e));
+});
+
+app.get('/insertFlats', (req, response) => {
+  User.find({}, {}, { sort: 'adsCount' })
+    .then((users) => {
+      const unparsedUsers = _.clone(users);
+      // while (unparsedUsers.length) {
+        unparsedUsers[0].ads.forEach((ad) => {
+          olxFlat(ad)
+            .then(({ price, rooms }) => {
+              Flat.findOne().then().catch();
+            }).catch((e) => {
+              console.log(e);
+            });
+        });
+      // }
+    })
+    .catch((e) => console.log(e));
 });
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
@@ -79,8 +116,8 @@ const getPath = (city) => { //todo separate funcs to other file?
   return `${realty.path}${rentFlat.path}${longTherm.path}${city}`;
 };
 
-const insertNewAds = (receivedAdRefs, response) => {
-  Ad.find().then((ads) => {
+const insertNewAds = (city, receivedAdRefs, response) => {
+  Ad.find({ city }).then((ads) => {
     const newAdRefs = _.difference(receivedAdRefs, ads.map(ad => ad.ref));
     if (newAdRefs.length) {
       console.log(`${newAdRefs.length} new ads were got from Olx`);
@@ -91,7 +128,7 @@ const insertNewAds = (receivedAdRefs, response) => {
       while (!isErr && i < batchesAdRefs.length) {
         const delay = i * batchDelay;
         console.log(`${i + 1}/${batchesAdRefs.length} batch of ${adsPerBatch} ads taken in parsing`);
-        setTimeout(insertBatchNewAds, delay, batchesAdRefs[i], i, (err, res) => {
+        setTimeout(insertBatchNewAds, delay, city, batchesAdRefs[i], i, (err, res) => {
             if (isErr) {
               response.end();
               return null;
@@ -118,7 +155,7 @@ const insertNewAds = (receivedAdRefs, response) => {
   }).catch(e => console.log('Unable connect to db', e));
 };
 
-const insertBatchNewAds = (batchAdRefs, i, cb) => {
+const insertBatchNewAds = (city, batchAdRefs, i, cb) => {
   console.log(`${i + 1} batch is parsing... It will take ${batchDelay/60000} min to prevent Olx ban ;)`);
   const newAdObjs = batchAdRefs.map((ref) => {
     const olxAdId = getAdIdFromRef(ref);
@@ -134,8 +171,9 @@ const insertBatchNewAds = (batchAdRefs, i, cb) => {
       const batchAds = phoneArrs.map((phones, i) => ({
         ref: newAdObjs[i].ref,
         phones,
+        city,
       }));
-      groupAdsByUserPhones(_.clone(batchAds), undefined, (msg) => {
+      groupAdsByUserPhones(_.clone(batchAds), null, (msg) => {
         console.log(msg);
         Ad.collection.insert(batchAds, cb);
       });
@@ -149,14 +187,14 @@ const getAdIdFromRef = (ref) => {
 };
 
 const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
-  const phonesForSearch = ungroupedAds[0].phones;
+  const { phones: phonesForSearch, city } = ungroupedAds[0];
   const foundAds = ungroupedAds.filter((ad) => _.intersection(ad.phones, phonesForSearch).length > 0);
-  User.findOne({ phones: { $in: phonesForSearch } })
+  User.findOne({ city, phones: { $in: phonesForSearch } })
     .then((res) => {
       const _id = (res && res._id) || new ObjectID();
       const ads = _.union((res && res.adIds) || [], foundAds.map(({ ref }) => ref));
       const phones = _.union((res && res.phones) || [], phonesForSearch);
-      User.update({ _id }, { $set: { phones, ads, adsCount: ads.length } }, { upsert: true })
+      User.update({ _id }, { $set: { city, phones, ads, adsCount: ads.length } }, { upsert: true })
         .then(() => {
           const successMsg = 'Users upserted by grouping ads with similar phones';
           _.pullAll(ungroupedAds, foundAds);

@@ -8,19 +8,66 @@ const Ad = mongoose.model('Ad', {
   },
   phones: {
     type: Array,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
   },
 });
 
 const User = mongoose.model('User', {
   phones: {
     type: Array,
+    required: true,
   },
   ads: {
     type: Array,
+    required: true,
   },
   adsCount: {
     type: Number,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+  },
+});
+
+const Flat = mongoose.model('Flat', {
+  title: {
+    type: String,
+  },
+  createdAt: {
+    type: Date,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+  },
+  usersId: {
+    type: Array,
+    required: true,
+  },
+  usersCount: {
+    type: Number,
+    required: true,
+  },
+  price: {
+    type: Object,
+  },
+  rooms: {
+    type: Number,
+    required: true,
+  },
+  wallType: {
+    type: String,
+  },
+  description: {
+    type: String,
   }
 });
 
-module.exports = { Ad, User };
+module.exports = { Ad, User, Flat };
