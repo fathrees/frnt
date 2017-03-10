@@ -24,24 +24,28 @@ const olxFlat = (ad) => {
   return new Promise((resolve, reject) => {
     request(ad, (err, res, html) => {
       if (err) {
+        console.log(err);
         reject(err);
         return null;
       }
       const $ = cheerio.load(html);
       const offerDescription = $('div#offerdescription');
       const titleBox = offerDescription.children('div.offer-titlebox');
+      let createdAt;
+      try {
+        createdAt = parseDate(titleBox.find('div.offer-titlebox__details em').text());
+      } catch (e) {
+        reject(`${ad} outdated`);
+        return null;
+      }
       const title = titleBox.children('h1').text().trim();
-      const createdAt = parseDate(titleBox.find('div.offer-titlebox__details em').text());
       const descriptionContent = offerDescription.children('div.descriptioncontent').children();
       const details = descriptionContent.first().children().last().children();
       const rooms = + details.first().find('table.item strong').text();
       const wallType = details.last().find('table.item a').text().trim();
       const description = descriptionContent.last().text().trim();
-      let price = $('.price-label strong').text().trim();
-      const priceValue = + price.replace(/\s/g, '').match(/\d+/);
-      const priceCy = price.replace(/\d|\s|\./g, '');
-      price = { priceValue, priceCy };
-      const flat = { title, createdAt, rooms, wallType, description, price };
+      const price = + $('.price-label strong').text().replace(/\D/g, '').match(/\d+/);
+      const flat = { ad, title, createdAt, rooms, wallType, description, price };
       resolve(flat);
     });
   })

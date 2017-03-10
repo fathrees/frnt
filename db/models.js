@@ -23,7 +23,6 @@ const User = mongoose.model('User', {
   },
   ads: {
     type: Array,
-    required: true,
   },
   adsCount: {
     type: Number,
@@ -40,7 +39,7 @@ const Flat = mongoose.model('Flat', {
     type: String,
   },
   createdAt: {
-    type: Date,
+    type: Number,
     required: true,
   },
   city: {

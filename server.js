@@ -81,8 +81,10 @@ app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice', (req, response
         flat.usersId.forEach((userId) => {
           const userWithPhones = { userId };
           User.findById(userId)
-            .then((user) => userWithPhones.phones = user.phones)
-            .catch((e) => console.log(e));
+            .then((user) => {
+              userWithPhones.phones = user.phones;
+              return userWithPhones;
+            }).catch((e) => console.log(e));
         });
       });
       response.send(flatsWithUserPhones);
@@ -90,21 +92,36 @@ app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice', (req, response
 });
 
 app.get('/insertFlats', (req, response) => {
-  User.find({}, {}, { sort: 'adsCount' })
-    .then((users) => {
-      const unparsedUsers = _.clone(users);
-      // while (unparsedUsers.length) {
-        unparsedUsers[0].ads.forEach((ad) => {
-          olxFlat(ad)
-            .then(({ price, rooms }) => {
-              Flat.findOne().then().catch();
-            }).catch((e) => {
-              console.log(e);
-            });
+  User.find({}, {}, { sort: 'adsCount' }).then((users) => {
+    users.forEach((user, i) => {
+      user.ads.forEach((ad) => {
+        olxFlat(ad).then((flat) => {
+          const newFlat = _.extend(_.clone(flat), { usersId: [user._id] });
+          Flat.collection.insert(newFlat).then(() => {
+            console.log(`New flat from ad ${ad} stored`);
+          }).catch((e) => console.log(e));
+        }).catch((e) => {
+          console.log(e);
+          if (e === `${ad} outdated`) {
+            User.findOne({ ads: ad }).then((user) => {
+              user.ads = _.without(user.ads, ad);
+              user.adsCount --;
+              user.save().then((user) => {
+                console.log(`User id:${user._id} updated`);
+                Ad.findOneAndRemove({ ref: ad }).then((ad1) => console.log(`Ad id:${ad1._id} removed`)).catch((e1) => console.log(e1));
+              }).catch((e1) => console.log(e1));
+            }).catch((e1) => console.log(e1));
+          }
         });
-      // }
-    })
-    .catch((e) => console.log(e));
+      });
+      if (i === users.length) {
+        Flat.find().then((flats) => {
+          console.log(`${flats.length} flats were successfully stored`);
+          response.send({ flats });
+        }).catch((e) => console.log(e));
+      }
+    });
+  }).catch((e) => console.log(e));
 });
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
@@ -192,7 +209,7 @@ const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
   User.findOne({ city, phones: { $in: phonesForSearch } })
     .then((res) => {
       const _id = (res && res._id) || new ObjectID();
-      const ads = _.union((res && res.adIds) || [], foundAds.map(({ ref }) => ref));
+      const ads = _.union((res && res.ads) || [], foundAds.map(({ ref }) => ref));
       const phones = _.union((res && res.phones) || [], phonesForSearch);
       User.update({ _id }, { $set: { city, phones, ads, adsCount: ads.length } }, { upsert: true })
         .then(() => {
