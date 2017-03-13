@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Users</title>
+</head>
+<body>
+	<table>
+		<tbody>
+			<tr>
+				<th>ID</th>
+				<th>Ad IDs</th>
+				<th>Ad Count</th>
+				<th>Phones</th>
+			</tr>
+			{{#each users}}
+				<tr>
+					<td>{{this._id}}</td>
+					<td>
+						{{#each this.adRefs}}
+							<p><a href="{{this}}">{{this}}</a></p>
+						{{/each}}
+					</td>
+					<td>{{this.adsCount}}</td>
+					<td>
+						{{#each this.phones}}
+							<p><b>{{this}}</b></p>
+						{{/each}}
+					</td>
+				</tr>
+			{{/each}}
+		</tbody>
+	</table>
+</body>
+</html>

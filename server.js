@@ -1,6 +1,7 @@
 const express = require('express');
 const timeout = require('connect-timeout');
 const _ = require('lodash');
+const hbs = require('hbs');
 const { ObjectID } = require('mongodb');
 
 const { mongoose } = require('./db/mongoose');
@@ -13,6 +14,13 @@ const batchDelay = 60000;// msec
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+hbs.registerPartials(__dirname + '/views/partials');
+app.set('view engine', 'hbs');
+
+hbs.registerHelper('', () => {
+  return null; //todo helpers
+});
 
 app.use(timeout(olxScrapTimeout));
 
@@ -63,9 +71,9 @@ app.get('/upsertUsersByGroupAds', (req, response) => {
 });
 
 app.get('/users/:city', (req, response) => {
-  User.find({ city: req.params.city }, { 'ads': true, 'phones': true }, { sort: 'adsCount' })
-    .then((res) => {
-      response.send(res);
+  User.find({ city: req.params.city }, {}, { sort: 'adsCount' })
+    .then((users) => {
+      response.render('users.hbs', { users });
     }).catch((e) => response.send(e));
 });
 
@@ -77,15 +85,16 @@ app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sort', (req, re
   query.price = { $gte: + lowPrice, $lte: + highPrice };
   const options = { sort };
   Ad.find(query, {}, options).then((ads) => {
-    let adIds = ads.map(({ _id }) => ObjectID(_id));
-    const usersQuery = { adIds: { $elemMatch: { $in: adIds} } };
+    let adRefs = ads.map(({ ref }) => ref);
+    const usersQuery = { adRefs: { $elemMatch: { $in: adRefs} } };
     const usersOpts = { sort: 'adsCount'};
     User.find(usersQuery, {}, usersOpts).then((users) => {
-      // adIds = users.map(({ adIds }) => adIds); // todo right sort
-      // Ad.find({ _id: { $in: _.flatten(adIds) } }).then((ads) => (
+      // adRefs = users.map(({ adRefs }) => adRefs); // todo right sort
+      // Ad.find({ _id: { $in: _.flatten(adRefs) } }).then((ads) => (
       //   response.send(ads)
       // )).catch((e) => response.send(e));
-      response.send(users);
+      response.send(ads);
+      // response.render('flats.hbs', { ads });
     }).catch((e) => response.send(e));
   }).catch((e) => response.send(e));
 });
@@ -181,9 +190,9 @@ const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
   User.findOne({ city, phones: { $in: phonesForSearch } })
     .then((res) => {
       const userId = (res && res._id) || new ObjectID();
-      const adIds = _.union((res && res.adIds) || [], foundAds.map(({ _id }) => _id));
+      const adRefs = _.union((res && res.adRefs) || [], foundAds.map(({ ref }) => ref));
       const phones = _.union((res && res.phones) || [], phonesForSearch);
-      User.update({ _id: userId }, { $set: { city, phones, adIds, adsCount: adIds.length } }, { upsert: true })
+      User.update({ _id: userId }, { $set: { city, phones, adRefs, adsCount: adRefs.length } }, { upsert: true })
         .then(() => {
           const successMsg = 'Users upserted by grouping ads with similar phones';
           _.pullAll(ungroupedAds, foundAds);

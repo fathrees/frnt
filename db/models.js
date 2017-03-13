@@ -43,7 +43,7 @@ const User = mongoose.model('User', {
     type: Array,
     required: true,
   },
-  adIds: {
+  adRefs: {
     type: Array,
   },
   adsCount: {
