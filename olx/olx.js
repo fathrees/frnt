@@ -20,12 +20,16 @@ const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   });
 };
 
-const olxFlat = (ad) => {
+const getAdContent = (ref) => {
   return new Promise((resolve, reject) => {
-    request(ad, (err, res, html) => {
+    request(ref, (err, res, html) => {
       if (err) {
         console.log(err);
         reject(err);
+        return null;
+      }
+      if (res && res.statusCode === 403) {
+        reject('Server banned by Olx :( Change code to prevent future ban or try 10 min later');
         return null;
       }
       const $ = cheerio.load(html);
@@ -35,7 +39,7 @@ const olxFlat = (ad) => {
       try {
         createdAt = parseDate(titleBox.find('div.offer-titlebox__details em').text());
       } catch (e) {
-        reject(`${ad} outdated`);
+        reject(`${ref} outdated`);
         return null;
       }
       const title = titleBox.children('h1').text().trim();
@@ -45,8 +49,8 @@ const olxFlat = (ad) => {
       const wallType = details.last().find('table.item a').text().trim();
       const description = descriptionContent.last().text().trim();
       const price = + $('.price-label strong').text().replace(/\D/g, '').match(/\d+/);
-      const flat = { ad, title, createdAt, rooms, wallType, description, price };
-      resolve(flat);
+      const content = { title, createdAt, rooms, wallType, description, price };
+      resolve(content);
     });
   })
 };
@@ -64,7 +68,7 @@ const tryOlxAdsRequest = (url, resolve, reject, page) => {
       return null;
     }
     if (res && res.statusCode === 403) {
-      reject('Server banned by Olx :( Change code to prevent ban or try 10 min later');
+      reject('Server banned by Olx :( Change code to prevent future ban or try 10 min later');
       return null;
     }
     if (!html) {
@@ -127,7 +131,7 @@ const parsePhones = (phonesStr) => {
 
 const cleanPhone = (phone) => phone.replace(/(\+38|^\s*8|\s|-|\(|\))/g, '');
 
-module.exports = { categories, olx, getPhones, olxFlat };
+module.exports = { categories, olx, getPhones, getAdContent };
 
 //https://www.olx.ua/ajax/misc/contact/desc/{adId}/ - get nums from ad description
 //https://www.olx.ua/ajax/misc/contact/phone/{adId}/ -get phones from "show phone" btn

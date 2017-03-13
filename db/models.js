@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+// todo schemes
+
 const Ad = mongoose.model('Ad', {
   ref: {
     type: String,
@@ -14,6 +16,26 @@ const Ad = mongoose.model('Ad', {
     type: String,
     required: true,
   },
+  title: {
+    type: String,
+  },
+  createdAt: {
+    type: Number,
+    required: true,
+  },
+  price: {
+    type: Number,
+  },
+  rooms: {
+    type: Number,
+    required: true,
+  },
+  wallType: {
+    type: String,
+  },
+  description: {
+    type: String,
+  },
 });
 
 const User = mongoose.model('User', {
@@ -21,7 +43,7 @@ const User = mongoose.model('User', {
     type: Array,
     required: true,
   },
-  ads: {
+  adIds: {
     type: Array,
   },
   adsCount: {
@@ -34,39 +56,4 @@ const User = mongoose.model('User', {
   },
 });
 
-const Flat = mongoose.model('Flat', {
-  title: {
-    type: String,
-  },
-  createdAt: {
-    type: Number,
-    required: true,
-  },
-  city: {
-    type: String,
-    required: true,
-  },
-  usersId: {
-    type: Array,
-    required: true,
-  },
-  usersCount: {
-    type: Number,
-    required: true,
-  },
-  price: {
-    type: Object,
-  },
-  rooms: {
-    type: Number,
-    required: true,
-  },
-  wallType: {
-    type: String,
-  },
-  description: {
-    type: String,
-  }
-});
-
-module.exports = { Ad, User, Flat };
+module.exports = { Ad, User };

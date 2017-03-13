@@ -4,8 +4,8 @@ const _ = require('lodash');
 const { ObjectID } = require('mongodb');
 
 const { mongoose } = require('./db/mongoose');
-const { Ad, User, Flat } = require('./db/models');
-const { olx, categories, getPhones, olxFlat } = require( './olx/olx');
+const { Ad, User } = require('./db/models');
+const { olx, categories, getPhones, getAdContent } = require( './olx/olx');
 
 const olxScrapTimeout = 3000000;// msec
 const adsPerBatch = 10;// todo move to constants.js separated file
@@ -69,59 +69,25 @@ app.get('/users/:city', (req, response) => {
     }).catch((e) => response.send(e));
 });
 
-app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice', (req, response) => {
-  const { city, lowRooms, highRooms, lowPrice, highPrice, } = req.params;
+app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sort', (req, response) => {
+  const { city, lowRooms, highRooms, lowPrice, highPrice, sort } = req.params;
   const query = {};
   if (city) query.city = city;
-  query.rooms = { $gte: lowRooms, $lte: highRooms };
-  query.price = { $gte: lowPrice, $lte: highPrice };
-  Flat.find(query, {}, { sort: {'usersCount': 1 } })
-    .then((flats) => {
-      const flatsWithUserPhones = flats.map((flat) => {
-        flat.usersId.forEach((userId) => {
-          const userWithPhones = { userId };
-          User.findById(userId)
-            .then((user) => {
-              userWithPhones.phones = user.phones;
-              return userWithPhones;
-            }).catch((e) => console.log(e));
-        });
-      });
-      response.send(flatsWithUserPhones);
+  query.rooms = { $gte: + lowRooms, $lte: + highRooms };
+  query.price = { $gte: + lowPrice, $lte: + highPrice };
+  const options = { sort };
+  Ad.find(query, {}, options).then((ads) => {
+    let adIds = ads.map(({ _id }) => ObjectID(_id));
+    const usersQuery = { adIds: { $elemMatch: { $in: adIds} } };
+    const usersOpts = { sort: 'adsCount'};
+    User.find(usersQuery, {}, usersOpts).then((users) => {
+      // adIds = users.map(({ adIds }) => adIds); // todo right sort
+      // Ad.find({ _id: { $in: _.flatten(adIds) } }).then((ads) => (
+      //   response.send(ads)
+      // )).catch((e) => response.send(e));
+      response.send(users);
     }).catch((e) => response.send(e));
-});
-
-app.get('/insertFlats', (req, response) => {
-  User.find({}, {}, { sort: 'adsCount' }).then((users) => {
-    users.forEach((user, i) => {
-      user.ads.forEach((ad) => {
-        olxFlat(ad).then((flat) => {
-          const newFlat = _.extend(_.clone(flat), { usersId: [user._id] });
-          Flat.collection.insert(newFlat).then(() => {
-            console.log(`New flat from ad ${ad} stored`);
-          }).catch((e) => console.log(e));
-        }).catch((e) => {
-          console.log(e);
-          if (e === `${ad} outdated`) {
-            User.findOne({ ads: ad }).then((user) => {
-              user.ads = _.without(user.ads, ad);
-              user.adsCount --;
-              user.save().then((user) => {
-                console.log(`User id:${user._id} updated`);
-                Ad.findOneAndRemove({ ref: ad }).then((ad1) => console.log(`Ad id:${ad1._id} removed`)).catch((e1) => console.log(e1));
-              }).catch((e1) => console.log(e1));
-            }).catch((e1) => console.log(e1));
-          }
-        });
-      });
-      if (i === users.length) {
-        Flat.find().then((flats) => {
-          console.log(`${flats.length} flats were successfully stored`);
-          response.send({ flats });
-        }).catch((e) => console.log(e));
-      }
-    });
-  }).catch((e) => console.log(e));
+  }).catch((e) => response.send(e));
 });
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
@@ -181,19 +147,25 @@ const insertBatchNewAds = (city, batchAdRefs, i, cb) => {
       return { ref };
     }
     const promisePhones = getPhones(olxAdId);
-    return { ref, promisePhones};
+    const promiseAdContent = getAdContent(ref);
+    return { ref, promisePhones, promiseAdContent };
   });
   Promise.all(newAdObjs.map((ad) => ad.promisePhones))
     .then((phoneArrs) => {
-      const batchAds = phoneArrs.map((phones, i) => ({
-        ref: newAdObjs[i].ref,
-        phones,
-        city,
-      }));
-      groupAdsByUserPhones(_.clone(batchAds), null, (msg) => {
-        console.log(msg);
-        Ad.collection.insert(batchAds, cb);
-      });
+      Promise.all(newAdObjs.map((ad) => ad.promiseAdContent))
+        .then((contents) => {
+          const batchAds = phoneArrs.map((phones, i) => (
+            _.extend({
+              _id: new ObjectID(),
+              ref: newAdObjs[i].ref,
+              phones,
+              city,
+          }, contents[i])));
+          groupAdsByUserPhones(_.clone(batchAds), null, (msg) => {
+            console.log(msg);
+            Ad.collection.insert(batchAds, cb);
+          });
+        }).catch((e) => cb(e));
     }).catch((e) => cb(e));
 };
 
@@ -208,15 +180,16 @@ const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
   const foundAds = ungroupedAds.filter((ad) => _.intersection(ad.phones, phonesForSearch).length > 0);
   User.findOne({ city, phones: { $in: phonesForSearch } })
     .then((res) => {
-      const _id = (res && res._id) || new ObjectID();
-      const ads = _.union((res && res.ads) || [], foundAds.map(({ ref }) => ref));
+      const userId = (res && res._id) || new ObjectID();
+      const adIds = _.union((res && res.adIds) || [], foundAds.map(({ _id }) => _id));
       const phones = _.union((res && res.phones) || [], phonesForSearch);
-      User.update({ _id }, { $set: { city, phones, ads, adsCount: ads.length } }, { upsert: true })
+      User.update({ _id: userId }, { $set: { city, phones, adIds, adsCount: adIds.length } }, { upsert: true })
         .then(() => {
           const successMsg = 'Users upserted by grouping ads with similar phones';
           _.pullAll(ungroupedAds, foundAds);
-          if (ungroupedAds.length) groupAdsByUserPhones(ungroupedAds, response, cb);
-          else if (response) {
+          if (ungroupedAds.length) {
+            groupAdsByUserPhones(ungroupedAds, response, cb);
+          } else if (response) {
             User.find().sort('adsCount')
               .then((users) => {
                 response.send(users);
