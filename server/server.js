@@ -6,7 +6,7 @@ const { ObjectID } = require('mongodb');
 
 const { mongoose } = require('./db/mongoose');
 const { Ad, User } = require('./db/models');
-const { olx, categories, getPhones, getAdContent } = require( './olx/olx');
+const { olx, categories, getPhones, getAdContent } = require( './../olx/olx');
 
 const olxScrapTimeout = 3000000;// msec
 const adsPerBatch = 10;// todo move to constants.js separated file
@@ -41,8 +41,7 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
     const city = req.params.city;
     const path = getPath(city);
     const promises = [];
-    olx({ path })
-    .then((resolveObj) => {
+    olx({ path }).then((resolveObj) => {
       console.log(`Scanning page 1/${resolveObj.pages || 1}`);
       for (let page = 2; page <= resolveObj.pages; page++) {
         console.log(`Scanning page ${page}/${resolveObj.pages}`);
@@ -50,8 +49,7 @@ app.get('/olx/realtyRentFlatLong/:city', (req, response) => {
       }
       let receivedAdRefs;
       if (promises.length) {
-        Promise.all(promises)
-        .then((resolvesArr) => {
+        Promise.all(promises).then((resolvesArr) => {
           receivedAdRefs = _.uniq(resolveObj.cleanedAdRefs.concat(_.flatten(resolvesArr)));
           insertNewAds(city, receivedAdRefs, response);
         }).catch((e) => response.send(e));
@@ -71,10 +69,9 @@ app.get('/upsertUsersByGroupAds', (req, response) => {
 });
 
 app.get('/users/:city', (req, response) => {
-  User.find({ city: req.params.city }, {}, { sort: 'adsCount' })
-    .then((users) => {
-      response.render('users.hbs', { users });
-    }).catch((e) => response.send(e));
+  User.find({ city: req.params.city }, {}, { sort: 'adsCount' }).then((users) => {
+    response.render('users.hbs', { users });
+  }).catch((e) => response.send(e));
 });
 
 app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sortBy/:sortDirection', (req, response) => {
@@ -122,23 +119,23 @@ const insertNewAds = (city, receivedAdRefs, response) => {
         const delay = i * batchDelay;
         console.log(`${i + 1}/${batchesAdRefs.length} batch of ${adsPerBatch} ads taken in parsing`);
         setTimeout(insertBatchNewAds, delay, city, batchesAdRefs[i], i, (err, res) => {
-            if (isErr) {
+          if (isErr) {
+            response.end();
+            return null;
+          }
+          console.log(err || `${res.insertedCount} new ads were successfully stored. Waiting for next batch...`);
+          if (err) {
+            response.send(err);
+            isErr = true;
+          } else {
+            insertedAds = insertedAds.concat(res.ops);
+            if (insertedAds.length === newAdRefs.length) {
+              response.send(insertedAds);
               response.end();
-              return null;
+              console.log(`All new ads (${insertedAds.length}) from Olx (${ads.length}) were successfully stored`);
             }
-            console.log(err || `${res.insertedCount} new ads were successfully stored. Waiting for next batch...`);
-            if (err) {
-              response.send(err);
-              isErr = true;
-            } else {
-              insertedAds = insertedAds.concat(res.ops);
-              if (insertedAds.length === newAdRefs.length) {
-                response.send(insertedAds);
-                response.end();
-                console.log(`All new ads (${insertedAds.length}) from Olx (${ads.length}) were successfully stored`);
-              }
-            }
-          });
+          }
+        });
         i++;
       }
     } else {
@@ -160,22 +157,20 @@ const insertBatchNewAds = (city, batchAdRefs, i, cb) => {
     const promiseAdContent = getAdContent(ref);
     return { ref, promisePhones, promiseAdContent };
   });
-  Promise.all(newAdObjs.map((ad) => ad.promisePhones))
-    .then((phoneArrs) => {
-      Promise.all(newAdObjs.map((ad) => ad.promiseAdContent))
-        .then((contents) => {
-          const batchAds = phoneArrs.map((phones, i) => (
-            _.extend({
-              ref: newAdObjs[i].ref,
-              phones,
-              city,
-          }, contents[i])));
-          groupAdsByUserPhones(_.clone(batchAds), null, (msg) => {
-            console.log(msg);
-            Ad.collection.insert(batchAds, cb);
-          });
-        }).catch((e) => cb(e));
+  Promise.all(newAdObjs.map((ad) => ad.promisePhones)).then((phoneArrs) => {
+    Promise.all(newAdObjs.map((ad) => ad.promiseAdContent)).then((contents) => {
+      const batchAds = phoneArrs.map((phones, i) => (
+        _.extend({
+          ref: newAdObjs[i].ref,
+          phones,
+          city,
+        }, contents[i])));
+      groupAdsByUserPhones(_.clone(batchAds), null, (msg) => {
+        console.log(msg);
+        Ad.collection.insert(batchAds, cb);
+      });
     }).catch((e) => cb(e));
+  }).catch((e) => cb(e));
 };
 
 const getAdIdFromRef = (ref) => {
@@ -187,24 +182,22 @@ const getAdIdFromRef = (ref) => {
 const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
   const { phones: phonesForSearch, city } = ungroupedAds[0];
   const foundAds = ungroupedAds.filter((ad) => _.intersection(ad.phones, phonesForSearch).length > 0);
-  User.findOne({ city, phones: { $in: phonesForSearch } })
-    .then((res) => {
-      const userId = (res && res._id) || new ObjectID();
-      const adRefs = _.union((res && res.adRefs) || [], foundAds.map(({ ref }) => ref));
-      const phones = _.union((res && res.phones) || [], phonesForSearch);
-      User.update({ _id: userId }, { $set: { city, phones, adRefs, adsCount: adRefs.length } }, { upsert: true })
-        .then(() => {
-          const successMsg = 'Users upserted by grouping ads with similar phones';
-          _.pullAll(ungroupedAds, foundAds);
-          if (ungroupedAds.length) {
-            groupAdsByUserPhones(ungroupedAds, response, cb);
-          } else if (response) {
-            User.find().sort('adsCount')
-              .then((users) => {
-                response.send(users);
-                console.log(successMsg);
-              }).catch((e) => response.send(e));
-          } else cb(successMsg);
-      }).catch((e) => console.log(e))
-    }).catch((e) => console.log(e));
+  User.findOne({ city, phones: { $in: phonesForSearch } }).then((res) => {
+    const userId = (res && res._id) || new ObjectID();
+    const adRefs = _.union((res && res.adRefs) || [], foundAds.map(({ ref }) => ref));
+    const phones = _.union((res && res.phones) || [], phonesForSearch);
+    const options = { $set: { city, phones, adRefs, adsCount: adRefs.length } };
+    User.update({ _id: userId }, options, { upsert: true }).then(() => {
+      const successMsg = 'Users upserted by grouping ads with similar phones';
+      _.pullAll(ungroupedAds, foundAds);
+      if (ungroupedAds.length) {
+        groupAdsByUserPhones(ungroupedAds, response, cb);
+      } else if (response) {
+        User.find().sort('adsCount').then((users) => {
+          response.send(users);
+          console.log(successMsg);
+        }).catch((e) => response.send(e));
+      } else cb(successMsg);
+    }).catch((e) => console.log(e))
+  }).catch((e) => console.log(e));
 };

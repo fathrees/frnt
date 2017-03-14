@@ -132,6 +132,3 @@ const parsePhones = (phonesStr) => {
 const cleanPhone = (phone) => phone.replace(/(\+38|^\s*8|\s|-|\(|\))/g, '');
 
 module.exports = { categories, olx, getPhones, getAdContent };
-
-//https://www.olx.ua/ajax/misc/contact/desc/{adId}/ - get nums from ad description
-//https://www.olx.ua/ajax/misc/contact/phone/{adId}/ -get phones from "show phone" btn
