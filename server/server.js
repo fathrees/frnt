@@ -1,16 +1,14 @@
 const express = require('express');
 const timeout = require('connect-timeout');
+const { ObjectID } = require('mongodb');
 const _ = require('lodash');
 const hbs = require('hbs');
-const { ObjectID } = require('mongodb');
 
 const { mongoose } = require('./db/mongoose');
 const { Ad, User } = require('./db/models');
-const { olx, categories, getPhones, getAdContent } = require( './../olx/olx');
-
-const olxScrapTimeout = 3000000;// msec
-const adsPerBatch = 10;// todo move to constants.js separated file
-const batchDelay = 60000;// msec
+const { olx, getPhones, getAdContent } = require( './../olx/olx');
+const { olxScrapTimeout, batchDelay, adsPerBatch } = require('./constants');
+const { getPath, getAdIdFromRef } = require('./functions');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -99,13 +97,6 @@ app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sortBy/:sortDir
 
 app.listen(`${port}`, () => console.log(`Server up on port ${port}`));
 
-const getPath = (city) => { //todo separate funcs to other file?
-  const realty = categories['realty'];
-  const rentFlat = realty['rentFlat'];
-  const longTherm = rentFlat['longTherm'];
-  return `${realty.path}${rentFlat.path}${longTherm.path}${city}`;
-};
-
 const insertNewAds = (city, receivedAdRefs, response) => {
   Ad.find({ city }).then((ads) => {
     const newAdRefs = _.difference(receivedAdRefs, ads.map(ad => ad.ref));
@@ -171,12 +162,6 @@ const insertBatchNewAds = (city, batchAdRefs, i, cb) => {
       });
     }).catch((e) => cb(e));
   }).catch((e) => cb(e));
-};
-
-const getAdIdFromRef = (ref) => {
-  const adIdRegex = new RegExp(/-ID(.+)\.html$/);
-  const match = ref.match(adIdRegex);
-  return match && match[1] || null;
 };
 
 const groupAdsByUserPhones = (ungroupedAds, response, cb) => {
