@@ -16,8 +16,9 @@ const port = process.env.PORT || 3000;
 hbs.registerPartials(__dirname + '/views/partials');
 app.set('view engine', 'hbs');
 
-hbs.registerHelper('', () => {
-  return null; //todo helpers
+hbs.registerHelper('toDate', (timestamp) => {
+  const date = new Date(timestamp);
+  return `${date.getDate()}.${date.getMonth()}.${date.getFullYear()}`;
 });
 
 app.use(timeout(olxScrapTimeout));
@@ -86,7 +87,7 @@ app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sortBy/:sortDir
           if (++ nUpdatedAds === ads.length) {
             const options = { sort: { isRealtorScale: 1 } };
             if (sortBy) options.sort[sortBy] = + sortDirection || 1;
-            Ad.find(query, {}, options).then((res) => response.send(res))
+            Ad.find(query, {}, options).then((res) => response.render('flats.hbs', { flats: res }))
             .catch((e) => response.send(e));
           }
         }).catch((e) => response.send(e))
@@ -122,7 +123,6 @@ const insertNewAds = (city, receivedAdRefs, response) => {
             insertedAds = insertedAds.concat(res.ops);
             if (insertedAds.length === newAdRefs.length) {
               response.send(insertedAds);
-              response.end();
               console.log(`All new ads (${insertedAds.length}) from Olx (${ads.length}) were successfully stored`);
             }
           }

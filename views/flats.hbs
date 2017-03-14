@@ -5,6 +5,35 @@
 	<title>Flats</title>
 </head>
 <body>
-	
+	<table>
+		<tbody>
+		<tr>
+			<th>Link</th>
+			<th>Created At</th>
+			<th>Rooms</th>
+			<th>Price</th>
+			<th>Title</th>
+			<th>Description</th>
+			<th>Phones</th>
+			<th>Is-Realtor Scale <sub>(less index - more likely owner)</sub></th>
+		</tr>
+		{{#each flats}}
+			<tr>
+				<td><a href="{{this.ref}}" target="_blank">{{this.ref}}</a></td>
+				<td>{{toDate this.createdAt}}</td>
+				<td>{{this.rooms}}</td>
+				<td>{{this.price}}</td>
+				<td>{{this.title}}</td>
+				<td>{{this.description}}</td>
+				<td>
+					{{#each this.phones}}
+						<p>{{this}}</p>
+					{{/each}}
+				</td>
+				<td>{{this.isRealtorScale}}</td>
+			</tr>
+		{{/each}}
+		</tbody>
+	</table>
 </body>
 </html>
