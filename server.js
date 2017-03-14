@@ -77,25 +77,26 @@ app.get('/users/:city', (req, response) => {
     }).catch((e) => response.send(e));
 });
 
-app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sort', (req, response) => {
-  const { city, lowRooms, highRooms, lowPrice, highPrice, sort } = req.params;
+app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sortBy/:sortDirection', (req, response) => {
+  const { city, lowRooms, highRooms, lowPrice, highPrice, sortBy, sortDirection } = req.params;
   const query = {};
   if (city) query.city = city;
   query.rooms = { $gte: + lowRooms, $lte: + highRooms };
   query.price = { $gte: + lowPrice, $lte: + highPrice };
-  const options = { sort };
-  Ad.find(query, {}, options).then((ads) => {
-    let adRefs = ads.map(({ ref }) => ref);
-    const usersQuery = { adRefs: { $elemMatch: { $in: adRefs} } };
-    const usersOpts = { sort: 'adsCount'};
-    User.find(usersQuery, {}, usersOpts).then((users) => {
-      // adRefs = users.map(({ adRefs }) => adRefs); // todo right sort
-      // Ad.find({ _id: { $in: _.flatten(adRefs) } }).then((ads) => (
-      //   response.send(ads)
-      // )).catch((e) => response.send(e));
-      response.send(ads);
-      // response.render('flats.hbs', { ads });
-    }).catch((e) => response.send(e));
+  let nUpdatedAds = 0;
+  Ad.find(query).then((ads) => {
+    ads.forEach((ad) => {
+      User.findOne({ adRefs: ad.ref }).then((user) => {
+        ad.update({ $set: { isRealtorScale: user.adsCount } }).then(() => {
+          if (++ nUpdatedAds === ads.length) {
+            const options = { sort: { isRealtorScale: 1 } };
+            if (sortBy) options.sort[sortBy] = + sortDirection || 1;
+            Ad.find(query, {}, options).then((res) => response.send(res))
+            .catch((e) => response.send(e));
+          }
+        }).catch((e) => response.send(e))
+      }).catch((e) => response.send(e));
+    });
   }).catch((e) => response.send(e));
 });
 
@@ -165,7 +166,6 @@ const insertBatchNewAds = (city, batchAdRefs, i, cb) => {
         .then((contents) => {
           const batchAds = phoneArrs.map((phones, i) => (
             _.extend({
-              _id: new ObjectID(),
               ref: newAdObjs[i].ref,
               phones,
               city,

@@ -36,6 +36,9 @@ const Ad = mongoose.model('Ad', {
   description: {
     type: String,
   },
+  isRealtorScale: {
+    type: Number,
+  },
 });
 
 const User = mongoose.model('User', {
