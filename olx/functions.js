@@ -6,10 +6,10 @@ const parseDate = (str) => {
   return new Date(`${rusMonths.indexOf(date[3]) + 1}/${date[2]}/${date[4]} ${date[1]}:00`).getTime();
 };
 
-const getAdRefs = (ads) => {
+const getTagsAtr = (tagsArr, atr) => {
   const $ = cheerio;
-  return ads.map(function() {
-    return $(this).attr('href');
+  return tagsArr.map(function() {
+    return $(this).attr(atr);
   }).get();
 };
 
@@ -28,4 +28,4 @@ const parsePhones = (phonesStr) => {
 
 const cleanPhone = (phone) => phone.replace(/(\+38|^\s*8|\s|-|\(|\))/g, '');
 
-module.exports = { parseDate, getAdRefs, parsePhones };
+module.exports = { parseDate, getTagsAtr, parsePhones };

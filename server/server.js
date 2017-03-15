@@ -9,17 +9,17 @@ const { Ad, User } = require('./db/models');
 const { olx, getPhones, getAdContent } = require( './../olx/olx');
 const { olxScrapTimeout, batchDelay, adsPerBatch } = require('./constants');
 const { getPath, getAdIdFromRef } = require('./functions');
+const { toDate, getBackgroundColorClass } = require('../views/helpers');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 hbs.registerPartials(__dirname + '/views/partials');
+
 app.set('view engine', 'hbs');
 
-hbs.registerHelper('toDate', (timestamp) => {
-  const date = new Date(timestamp);
-  return `${date.getDate()}.${date.getMonth()}.${date.getFullYear()}`;
-});
+hbs.registerHelper('toDate', toDate);
+hbs.registerHelper('getBackgroundColorClass', getBackgroundColorClass);
 
 app.use(timeout(olxScrapTimeout));
 

@@ -39,6 +39,9 @@ const Ad = mongoose.model('Ad', {
   isRealtorScale: {
     type: Number,
   },
+  pics: {
+    type: Array,
+  },
 });
 
 const User = mongoose.model('User', {

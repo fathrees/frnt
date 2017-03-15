@@ -1,7 +1,7 @@
 const request = require('request');
 const cheerio = require('cheerio');
 
-const { parseDate, getAdRefs, parsePhones } = require('./functions');
+const { parseDate, getTagsAtr, parsePhones } = require('./functions');
 
 const olx = ({ rootPath = 'https://www.olx.ua/', path, page }) => {
   return new Promise((resolve, reject) => {
@@ -26,7 +26,7 @@ const tryOlxAdsRequest = (url, resolve, reject, page) => {
     }
     const $ = cheerio.load(html);
     const ads = $('.listHandler table tr.wrap a.thumb');
-    const adRefs = getAdRefs(ads);
+    const adRefs = getTagsAtr(ads, 'href');
     const cleanedAdRefs = adRefs.map((ref) => ref.replace(/.html#.+$/, '.html'));
     if (!page) {
       const pages = $('.pager .item').length;
@@ -65,7 +65,8 @@ const getAdContent = (ref) => {
       const wallType = details.last().find('table.item a').text().trim();
       const description = descriptionContent.last().text().trim();
       const price = + $('.price-label strong').text().replace(/\D/g, '').match(/\d+/);
-      const content = { title, createdAt, rooms, wallType, description, price };
+      const pics = getTagsAtr($('.photo-glow img'), 'src');
+      const content = { title, createdAt, rooms, wallType, description, price, pics };
       resolve(content);
     });
   })

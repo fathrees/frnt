@@ -3,27 +3,42 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Flats</title>
+	<style type="text/css">
+		.table-header {	background: blanchedalmond }
+		.green-row { background: lightgreen	}
+		.yellow-row { background: rgba(255, 255, 0, 0.4) }
+		.red-row { background: rgba(255, 0, 0, 0.6)}
+		.thumbnails {
+			width: 100px;
+		}
+	</style>
 </head>
 <body>
 	<table>
 		<tbody>
-		<tr>
+		<tr class="table-header">
 			<th>Link</th>
-			<th>Created At</th>
 			<th>Rooms</th>
 			<th>Price</th>
+			<th>Pics</th>
 			<th>Title</th>
+			<th>Created At</th>
 			<th>Description</th>
 			<th>Phones</th>
 			<th>Is-Realtor Scale <sub>(less index - more likely owner)</sub></th>
 		</tr>
 		{{#each flats}}
-			<tr>
+			<tr class="{{getBackgroundColorClass this.isRealtorScale}}">
 				<td><a href="{{this.ref}}" target="_blank">{{this.ref}}</a></td>
-				<td>{{toDate this.createdAt}}</td>
 				<td>{{this.rooms}}</td>
 				<td>{{this.price}}</td>
+				<td>
+					{{#each this.pics}}
+						<img class="thumbnails" src="{{this}}" />
+					{{/each}}
+				</td>
 				<td>{{this.title}}</td>
+				<td>{{toDate this.createdAt}}</td>
 				<td>{{this.description}}</td>
 				<td>
 					{{#each this.phones}}
