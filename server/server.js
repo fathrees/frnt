@@ -12,6 +12,7 @@ const { Ad, User } = require('./db/models');
 const { olx, getPhones, getAdContent } = require( '../olx/olx');
 const { cities } = require('../olx/constants');
 const { toDate, getBackgroundColorClass } = require('../views/js/helpers');
+const { getCitiesList } = require('../views/js/functions');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,9 +25,6 @@ hbs.registerPartials(`${viewsPath}/partials`);
 
 hbs.registerHelper('toDate', toDate);
 hbs.registerHelper('getBackgroundColorClass', getBackgroundColorClass);
-// hbs.registerHelper('isCitySelected', isCitySelected);
-
-app.use(express.static(__dirname + '/public'));
 
 app.use(timeout(olxScrapTimeout));
 
@@ -101,7 +99,7 @@ app.get('/flats', (req, response) => {
             Ad.find(query, {}, options).then((res) => response.render('flats.hbs', {
               query: req.query,
               flats: res,
-              cities,
+              cities: getCitiesList(cities, req.query.city),
             })).catch((e) => response.send(e));
           }
         }).catch((e) => response.send(e))

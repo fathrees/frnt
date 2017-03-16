@@ -7,16 +7,16 @@
 		</select>
 	</label>
 	<label>Rooms from
-		<input name="lowRooms" type="number" min="1" value="1">
+		<input name="lowRooms" type="number" min="1" value="{{query.lowRooms}}">
 	</label>
 	<label>to
-		<input name="highRooms" type="number" min="1" value="5">
+		<input name="highRooms" type="number" min="1" value="{{query.highRooms}}">
 	</label>
 	<label>Price from
-		<input name="lowPrice" type="number" min="0" value="1000" step="100">
+		<input name="lowPrice" type="number" min="0" value="{{query.lowPrice}}" step="100">
 	</label>
 	<label>to
-		<input name="highPrice" type="number" min="0" value="10000" step="100">
+		<input name="highPrice" type="number" min="0" value="{{query.highPrice}}" step="100">
 	</label>hrn
 	<label>Sort by
 		<select name="sortBy">
