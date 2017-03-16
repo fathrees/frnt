@@ -2,26 +2,37 @@ const express = require('express');
 const timeout = require('connect-timeout');
 const { ObjectID } = require('mongodb');
 const _ = require('lodash');
+const path = require('path');
 const hbs = require('hbs');
 
-const { mongoose } = require('./db/mongoose');
-const { Ad, User } = require('./db/models');
-const { olx, getPhones, getAdContent } = require( './../olx/olx');
 const { olxScrapTimeout, batchDelay, adsPerBatch } = require('./constants');
 const { getPath, getAdIdFromRef } = require('./functions');
-const { toDate, getBackgroundColorClass } = require('../views/helpers');
+const { mongoose } = require('./db/mongoose');
+const { Ad, User } = require('./db/models');
+const { olx, getPhones, getAdContent } = require( '../olx/olx');
+const { cities } = require('../olx/constants');
+const { toDate, getBackgroundColorClass } = require('../views/js/helpers');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-hbs.registerPartials(__dirname + '/views/partials');
+const viewsPath = path.join(__dirname, '../views');
 
 app.set('view engine', 'hbs');
 
+hbs.registerPartials(`${viewsPath}/partials`);
+
 hbs.registerHelper('toDate', toDate);
 hbs.registerHelper('getBackgroundColorClass', getBackgroundColorClass);
+// hbs.registerHelper('isCitySelected', isCitySelected);
+
+app.use(express.static(__dirname + '/public'));
 
 app.use(timeout(olxScrapTimeout));
+
+app.get('/', (req, response) => {
+  response.render('home.hbs');
+});
 
 let isRequestSent = false; // It's needed to resolve issue below
 
@@ -73,12 +84,12 @@ app.get('/users/:city', (req, response) => {
   }).catch((e) => response.send(e));
 });
 
-app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sortBy/:sortDirection', (req, response) => {
-  const { city, lowRooms, highRooms, lowPrice, highPrice, sortBy, sortDirection } = req.params;
+app.get('/flats', (req, response) => {
+  const { city, lowRooms, highRooms, lowPrice, highPrice, sortBy, sortDirection } = req.query;
   const query = {};
   if (city) query.city = city;
-  query.rooms = { $gte: + lowRooms, $lte: + highRooms };
-  query.price = { $gte: + lowPrice, $lte: + highPrice };
+  if (lowRooms && highRooms) query.rooms = { $gte: + lowRooms, $lte: + highRooms };
+  if (lowPrice && highPrice) query.price = { $gte: + lowPrice, $lte: + highPrice };
   let nUpdatedAds = 0;
   Ad.find(query).then((ads) => {
     ads.forEach((ad) => {
@@ -87,8 +98,11 @@ app.get('/flats/:city/:lowRooms/:highRooms/:lowPrice/:highPrice/:sortBy/:sortDir
           if (++ nUpdatedAds === ads.length) {
             const options = { sort: { isRealtorScale: 1 } };
             if (sortBy) options.sort[sortBy] = + sortDirection || 1;
-            Ad.find(query, {}, options).then((res) => response.render('flats.hbs', { flats: res }))
-            .catch((e) => response.send(e));
+            Ad.find(query, {}, options).then((res) => response.render('flats.hbs', {
+              query: req.query,
+              flats: res,
+              cities,
+            })).catch((e) => response.send(e));
           }
         }).catch((e) => response.send(e))
       }).catch((e) => response.send(e));

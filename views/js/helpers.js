@@ -1,3 +1,5 @@
+const hbs = require('hbs');
+
 const toDate = (timestamp) => {
   const date = new Date(timestamp);
   let day = date.getDate();
@@ -15,4 +17,10 @@ const getBackgroundColorClass = (isRealtorScale) => {
   }
 };
 
+// const isCitySelected = (city, queryCity) => {
+//   console.log(city, queryCity);
+//   return new hbs.SafeString((city === queryCity && 'selected') || '');
+// };
+
+// module.exports = { toDate, getBackgroundColorClass, isCitySelected };
 module.exports = { toDate, getBackgroundColorClass };
