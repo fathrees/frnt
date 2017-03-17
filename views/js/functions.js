@@ -1,10 +1,10 @@
 const _ = require('lodash');
 
-const getCitiesList = (cities, prevCity) => {
-   let citiesList = _.without(cities, prevCity);
-   citiesList.unshift(prevCity);
-   return citiesList;
+const getListWithFirstItem = (list, item) => {
+   let newList = _.without(list, item);
+   newList.unshift(item);
+   return newList;
 };
 
-module.exports = { getCitiesList };
+module.exports = { getListWithFirstItem };
 

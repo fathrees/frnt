@@ -10,6 +10,4 @@ const categories = {
   },
 };
 
-const cities = ['ivano-frankovsk', 'ternopol']; //todo fill all cities
-
-module.exports = { categories, cities };
+module.exports = { categories };

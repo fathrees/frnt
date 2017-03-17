@@ -3,24 +3,17 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Flats</title>
-	<style type="text/css">
-		.table-header {	background: blanchedalmond }
-		.green-row { background: lightgreen	}
-		.yellow-row { background: rgba(255, 255, 0, 0.4) }
-		.red-row { background: rgba(255, 0, 0, 0.6)}
-		.thumbnails {
-			width: 100px;
-		}
-	</style>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	{{> flatsStyle}}
 </head>
 <body>
-	{{> flatSearchForm query=query cities=cities}}
+	{{> flatSearchForm query=query cities=cities flatSortFields=flatSortFields sortDirections=sortDirections}}
 	<table>
 		<tbody>
 		<tr class="table-header">
 			<th>Link</th>
 			<th>Rooms</th>
-			<th>Price</th>
+			<th>Price (hrn)</th>
 			<th>Pics</th>
 			<th>Title</th>
 			<th>Created At</th>
@@ -34,9 +27,7 @@
 				<td>{{this.rooms}}</td>
 				<td>{{this.price}}</td>
 				<td>
-					{{#each this.pics}}
-						<img class="thumbnails" src="{{this}}" />
-					{{/each}}
+					<img class="thumbnail" data-toggle="modal" data-target=".modal-carousel-{{@index}}" src="{{getThumbnail this.pics}}"/>
 				</td>
 				<td>{{this.title}}</td>
 				<td>{{toDate this.createdAt}}</td>
@@ -48,8 +39,11 @@
 				</td>
 				<td>{{this.isRealtorScale}}</td>
 			</tr>
+			{{> modalCarousel class=@index pics=this.pics}}
 		{{/each}}
 		</tbody>
 	</table>
+	<script	src="https://code.jquery.com/jquery-3.2.0.min.js" integrity="sha256-JAW99MJVpJBGcbzEuXk4Az05s/XyDdBomFqNlM3ic+I=" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 </body>
 </html>

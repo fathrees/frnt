@@ -20,14 +20,15 @@
 	</label>hrn
 	<label>Sort by
 		<select name="sortBy">
-			<option value="createdAt">Created at</option>
-			<option value="rooms">Rooms</option>
-			<option value="price">Price</option>
+			{{#each flatSortFields}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
 		</select>
 	</label>
 	<select name="sortDirection">
-		<option value="1">Inc</option>
-		<option value="-1">Dec</option>
+		{{#each sortDirections}}
+			<option value="{{this}}">{{this}}</option>
+		{{/each}}
 	</select>
 	<button type="submit">Search</button>
 </form>

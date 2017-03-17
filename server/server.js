@@ -5,14 +5,13 @@ const _ = require('lodash');
 const path = require('path');
 const hbs = require('hbs');
 
-const { olxScrapTimeout, batchDelay, adsPerBatch } = require('./constants');
+const { olxScrapTimeout, batchDelay, adsPerBatch, cities, flatSortFields } = require('./constants');
 const { getPath, getAdIdFromRef } = require('./functions');
 const { mongoose } = require('./db/mongoose');
 const { Ad, User } = require('./db/models');
 const { olx, getPhones, getAdContent } = require( '../olx/olx');
-const { cities } = require('../olx/constants');
 const { toDate, getBackgroundColorClass } = require('../views/js/helpers');
-const { getCitiesList } = require('../views/js/functions');
+const { getListWithFirstItem } = require('../views/js/functions');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -25,6 +24,10 @@ hbs.registerPartials(`${viewsPath}/partials`);
 
 hbs.registerHelper('toDate', toDate);
 hbs.registerHelper('getBackgroundColorClass', getBackgroundColorClass);
+hbs.registerHelper('getThumbnail', (pics) => pics[0]);
+hbs.registerHelper('isActiveSlide', (index) => {
+  if (!index) return 'active';
+});
 
 app.use(timeout(olxScrapTimeout));
 
@@ -84,6 +87,7 @@ app.get('/users/:city', (req, response) => {
 
 app.get('/flats', (req, response) => {
   const { city, lowRooms, highRooms, lowPrice, highPrice, sortBy, sortDirection } = req.query;
+  const sortDirections = ['1', '-1'];
   const query = {};
   if (city) query.city = city;
   if (lowRooms && highRooms) query.rooms = { $gte: + lowRooms, $lte: + highRooms };
@@ -99,7 +103,9 @@ app.get('/flats', (req, response) => {
             Ad.find(query, {}, options).then((res) => response.render('flats.hbs', {
               query: req.query,
               flats: res,
-              cities: getCitiesList(cities, req.query.city),
+              flatSortFields: getListWithFirstItem(flatSortFields, req.query.sortBy),
+              sortDirections: getListWithFirstItem(sortDirections, req.query.sortDirection),
+              cities: getListWithFirstItem(cities, req.query.city),
             })).catch((e) => response.send(e));
           }
         }).catch((e) => response.send(e))

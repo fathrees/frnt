@@ -17,10 +17,4 @@ const getBackgroundColorClass = (isRealtorScale) => {
   }
 };
 
-// const isCitySelected = (city, queryCity) => {
-//   console.log(city, queryCity);
-//   return new hbs.SafeString((city === queryCity && 'selected') || '');
-// };
-
-// module.exports = { toDate, getBackgroundColorClass, isCitySelected };
 module.exports = { toDate, getBackgroundColorClass };
