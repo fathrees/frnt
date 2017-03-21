@@ -7,4 +7,3 @@ const getListWithFirstItem = (list, item) => {
 };
 
 module.exports = { getListWithFirstItem };
-

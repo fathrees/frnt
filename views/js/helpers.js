@@ -11,9 +11,9 @@ const toDate = (timestamp) => {
 
 const getBackgroundColorClass = (isRealtorScale) => {
   switch (isRealtorScale) {
-    case 1 : return 'green-row';
-    case 2 : return 'yellow-row';
-    default : return 'red-row';
+    case 1 : return 'success';
+    case 2 : return 'warning';
+    default : return 'danger';
   }
 };
 

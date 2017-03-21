@@ -25,9 +25,6 @@ hbs.registerPartials(`${viewsPath}/partials`);
 hbs.registerHelper('toDate', toDate);
 hbs.registerHelper('getBackgroundColorClass', getBackgroundColorClass);
 hbs.registerHelper('getThumbnail', (pics) => pics[0]);
-hbs.registerHelper('isActiveSlide', (index) => {
-  if (!index) return 'active';
-});
 
 app.use(timeout(olxScrapTimeout));
 

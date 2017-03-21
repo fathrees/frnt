@@ -1,34 +1,48 @@
-<form id="flat-search-form">
-	<label>City
-		<select name="city">
-			{{#each cities}}
+<form id="flat-search-form" class="form-inline">
+	<div class="form-group">
+		<label>City
+			<select id="city" name="city" class="form-control">
+				{{#each cities}}
+					<option value="{{this}}">{{this}}</option>
+				{{/each}}
+			</select>
+		</label>
+	</div>
+	<div class="form-group">
+		<label>Rooms from
+			<input name="lowRooms" type="number" class="form-control" min="1" value="{{query.lowRooms}}">
+		</label>
+	</div>
+	<div class="form-group">
+		<label>to
+			<input name="highRooms" type="number" min="1" class="form-control" value="{{query.highRooms}}">
+		</label>
+	</div>
+	<div class="form-group">
+		<label>Price from
+			<input name="lowPrice" type="number" class="form-control" min="0" value="{{query.lowPrice}}" step="100">
+		</label>
+	</div>
+	<div class="form-group">
+		<label>to
+			<input name="highPrice" type="number" class="form-control" min="0" value="{{query.highPrice}}" step="100">
+		</label>hrn
+	</div>
+	<div class="form-group">
+		<label>Sort by
+			<select name="sortBy" class="form-control">
+				{{#each flatSortFields}}
+					<option value="{{this}}">{{this}}</option>
+				{{/each}}
+			</select>
+		</label>
+	</div>
+	<div class="form-group">
+		<select name="sortDirection" class="form-control">
+			{{#each sortDirections}}
 				<option value="{{this}}">{{this}}</option>
 			{{/each}}
 		</select>
-	</label>
-	<label>Rooms from
-		<input name="lowRooms" type="number" min="1" value="{{query.lowRooms}}">
-	</label>
-	<label>to
-		<input name="highRooms" type="number" min="1" value="{{query.highRooms}}">
-	</label>
-	<label>Price from
-		<input name="lowPrice" type="number" min="0" value="{{query.lowPrice}}" step="100">
-	</label>
-	<label>to
-		<input name="highPrice" type="number" min="0" value="{{query.highPrice}}" step="100">
-	</label>hrn
-	<label>Sort by
-		<select name="sortBy">
-			{{#each flatSortFields}}
-				<option value="{{this}}">{{this}}</option>
-			{{/each}}
-		</select>
-	</label>
-	<select name="sortDirection">
-		{{#each sortDirections}}
-			<option value="{{this}}">{{this}}</option>
-		{{/each}}
-	</select>
-	<button type="submit">Search</button>
+	</div>
+	<button type="submit" class="btn btn-primary">Search</button>
 </form>

@@ -8,9 +8,9 @@
 </head>
 <body>
 	{{> flatSearchForm query=query cities=cities flatSortFields=flatSortFields sortDirections=sortDirections}}
-	<table>
+	<table class="table">
 		<tbody>
-		<tr class="table-header">
+		<tr class="active">
 			<th>Link</th>
 			<th>Rooms</th>
 			<th>Price (hrn)</th>
@@ -27,7 +27,11 @@
 				<td>{{this.rooms}}</td>
 				<td>{{this.price}}</td>
 				<td>
-					<img class="thumbnail" data-toggle="modal" data-target=".modal-carousel-{{@index}}" src="{{getThumbnail this.pics}}"/>
+					{{#if this.pics}}
+						<img class="thumbnail" data-toggle="modal" data-target=".modal-carousel-{{@index}}" src="{{getThumbnail this.pics}}"/>
+						{{> modalCarousel id=@index pics=this.pics}}
+					{{else}}NO PIC
+					{{/if}}
 				</td>
 				<td>{{this.title}}</td>
 				<td>{{toDate this.createdAt}}</td>
@@ -39,11 +43,19 @@
 				</td>
 				<td>{{this.isRealtorScale}}</td>
 			</tr>
-			{{> modalCarousel class=@index pics=this.pics}}
 		{{/each}}
 		</tbody>
 	</table>
+	<div id="modal-container"></div>
 	<script	src="https://code.jquery.com/jquery-3.2.0.min.js" integrity="sha256-JAW99MJVpJBGcbzEuXk4Az05s/XyDdBomFqNlM3ic+I=" crossorigin="anonymous"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	<!--<script>-->
+		<!--$('img.thumbnail').on('click', (e) => {-->
+		  <!--const img = e.target;-->
+		  <!--console.log(img.id);-->
+		  <!--img.setAttribute('data-target', `.modal-carousel-${img.id}`);-->
+		  <!--img.setAttribute('data-toggle', 'modal');-->
+		<!--});-->
+	<!--</script>-->
 </body>
 </html>
