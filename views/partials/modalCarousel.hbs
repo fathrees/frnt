@@ -1,23 +1,28 @@
-<div class="modal fade modal-carousel-{{id}}" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel">
+<div class="modal fade modal-carousel modal-carousel-{{id}}" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel">
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
-			<div id="carousel-generic-{{id}}" class="carousel slide" data-ride="carousel">
+			<div id="carousel-generic-{{id}}" class="carousel slide" data-ride="carousel" data-interval="60000">
 				<!-- Indicators -->
-				<ol class="carousel-indicators">
+				<div class="carousel-indicators">
 					{{#each pics}}
-						<li
-							data-target="#carousel-generic-{{id}}"
-							data-slide-to="{{@index}}"
-							class="{{#if @first}}active{{/if}}">
-						</li>
+						<div class="carousel-indicator-container {{#if @first}}active{{/if}}">
+							<img
+								src="{{this}}"
+								data-target="#carousel-generic-{{../id}}"
+								data-slide-to="{{@index}}"
+								class="carousel-indicator"
+							/>
+						</div>
 					{{/each}}
-				</ol>
+				</div>
 
 				<!-- Wrapper for slides -->
 				<div class="carousel-inner" role="listbox">
 					{{#each pics}}
 						<div class="item {{#if @first}}active{{/if}}">
-							<img src="{{this}}">
+							<div class="img-wrapper">
+								<img src="{{this}}">
+							</div>
 						</div>
 					{{/each}}
 				</div>

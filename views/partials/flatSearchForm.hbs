@@ -1,48 +1,58 @@
-<form id="flat-search-form" class="form-inline">
-	<div class="form-group">
-		<label>City
-			<select id="city" name="city" class="form-control">
-				{{#each cities}}
-					<option value="{{this}}">{{this}}</option>
-				{{/each}}
-			</select>
-		</label>
-	</div>
-	<div class="form-group">
-		<label>Rooms from
-			<input name="lowRooms" type="number" class="form-control" min="1" value="{{query.lowRooms}}">
-		</label>
-	</div>
-	<div class="form-group">
-		<label>to
-			<input name="highRooms" type="number" min="1" class="form-control" value="{{query.highRooms}}">
-		</label>
-	</div>
-	<div class="form-group">
-		<label>Price from
-			<input name="lowPrice" type="number" class="form-control" min="0" value="{{query.lowPrice}}" step="100">
-		</label>
-	</div>
-	<div class="form-group">
-		<label>to
-			<input name="highPrice" type="number" class="form-control" min="0" value="{{query.highPrice}}" step="100">
-		</label>hrn
-	</div>
-	<div class="form-group">
-		<label>Sort by
-			<select name="sortBy" class="form-control">
-				{{#each flatSortFields}}
-					<option value="{{this}}">{{this}}</option>
-				{{/each}}
-			</select>
-		</label>
-	</div>
-	<div class="form-group">
-		<select name="sortDirection" class="form-control">
-			{{#each sortDirections}}
-				<option value="{{this}}">{{this}}</option>
-			{{/each}}
-		</select>
-	</div>
-	<button type="submit" class="btn btn-primary">Search</button>
-</form>
+<div class="form-container">
+	<form id="flat-search-form" class="form-inline">
+		<div class="form-group">
+			<label>City
+				<select id="city" name="city" class="form-control">
+					{{#each cities}}
+						<option value="{{this}}">{{this}}</option>
+					{{/each}}
+				</select>
+			</label>
+		</div>
+		<div class="form-group">
+			<label>Rooms <i>from</i>
+				<input name="lowRooms" type="number" class="form-control" min="1" value="{{query.lowRooms}}">
+			</label>
+		</div>
+		<div class="form-group">
+			<label class="no-left-margin"><i>to</i>
+				<input name="highRooms" type="number" min="1" class="form-control" value="{{query.highRooms}}">
+			</label>
+		</div>
+		<div class="form-group">
+			<label>Price <i>from</i>
+				<div class="input-group">
+					<input name="lowPrice" type="number" class="form-control" min="0" value="{{query.lowPrice}}">
+					<div class="input-group-addon">UAH</div>
+				</div>
+			</label>
+		</div>
+		<div class="form-group">
+			<label class="no-left-margin"><i>to</i>
+				<div class="input-group">
+					<input name="highPrice" type="number" class="form-control" min="0" value="{{query.highPrice}}">
+					<div class="input-group-addon">UAH</div>
+				</div>
+			</label>
+		</div>
+		<div class="form-group">
+			<label>Sort by
+				<select name="sortBy" class="form-control">
+					{{#each flatSortFields}}
+						<option value="{{this}}">{{this}}</option>
+					{{/each}}
+				</select>
+			</label>
+		</div>
+		<div class="form-group">
+			<label class="no-left-margin">
+				<select name="sortDirection" class="form-control">
+					{{#each sortDirections}}
+						<option value="{{this}}">{{this}}</option>
+					{{/each}}
+				</select>
+			</label>
+		</div>
+		<button type="submit" class="btn btn-primary">Search</button>
+	</form>
+</div>

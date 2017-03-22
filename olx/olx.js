@@ -64,7 +64,11 @@ const getAdContent = (ref) => {
       const rooms = + details.first().find('table.item strong').text();
       const wallType = details.last().find('table.item a').text().trim();
       const description = descriptionContent.last().text().trim();
-      const price = + $('.price-label strong').text().replace(/\D/g, '').match(/\d+/);
+      let price = $('.price-label strong').text().replace(/\s/g, '').match(/(\d+)(.+)/);
+      price = { value: price[1], currency: price[2] };
+      if (price.currency === '€') {
+        price = price.value// todo currency
+      }
       const pics = getTagsAtr($('.photo-glow img'), 'src');
       const content = { title, createdAt, rooms, wallType, description, price, pics };
       resolve(content);

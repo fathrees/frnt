@@ -1,4 +1,51 @@
 <style type="text/css">
-	.thumbnail { height: 100px }
-	.thumbnail:hover { cursor: pointer }
+	.form-container {
+		text-align: center;
+		padding: 25px 0 10px 0;
+		background: azure;
+	}
+	.form-container form button.btn { margin-bottom: 5px }
+	.form-container form label { margin-left: 10px }
+	.form-container form label.no-left-margin { margin-left: 0 }
+	.form-container form input[type=number].form-control { width: 80px }
+
+	table.table { margin-bottom: 0 }
+	table.table th { color: grey }
+	table.table tr > :first-child {	padding-left: 25px }
+	table.table tr .centered { text-align: center }
+	table.table img { margin: auto }
+	table.table img.thumbnail { height: 100px }
+	table.table img.thumbnail:hover { cursor: pointer }
+
+	.modal-carousel .modal-content {
+		width: 700px;
+		height: 600px;
+		background: rgba(0,0,0,.8);
+	}
+		.modal-carousel .carousel .item .img-wrapper {
+			display: table-cell;
+			vertical-align: middle;
+			width: 700px;
+			height: 600px;
+			background: inherit;
+		}
+		.modal-carousel .carousel .carousel-indicators {
+			width: 90%;
+			bottom: 10px;
+			left: 35%;
+		}
+			.carousel-indicators .carousel-indicator-container {
+				display: inline-block;
+				width: 40px;
+				height: 40px;
+				background: transparent;
+				border-radius: 5px;
+			}
+				.carousel-indicators .carousel-indicator-container.active { background: #fff }
+					.carousel-indicator-container img.carousel-indicator {
+						width: inherit;
+						height: inherit;
+						opacity: 0.5;
+						border-radius: 5px;
+					}
 </style>

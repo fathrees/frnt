@@ -8,54 +8,47 @@
 </head>
 <body>
 	{{> flatSearchForm query=query cities=cities flatSortFields=flatSortFields sortDirections=sortDirections}}
-	<table class="table">
-		<tbody>
-		<tr class="active">
-			<th>Link</th>
-			<th>Rooms</th>
-			<th>Price (hrn)</th>
-			<th>Pics</th>
-			<th>Title</th>
-			<th>Created At</th>
-			<th>Description</th>
-			<th>Phones</th>
-			<th>Is-Realtor Scale <sub>(less index - more likely owner)</sub></th>
-		</tr>
-		{{#each flats}}
-			<tr class="{{getBackgroundColorClass this.isRealtorScale}}">
-				<td><a href="{{this.ref}}" target="_blank">{{this.ref}}</a></td>
-				<td>{{this.rooms}}</td>
-				<td>{{this.price}}</td>
-				<td>
-					{{#if this.pics}}
-						<img class="thumbnail" data-toggle="modal" data-target=".modal-carousel-{{@index}}" src="{{getThumbnail this.pics}}"/>
-						{{> modalCarousel id=@index pics=this.pics}}
-					{{else}}NO PIC
-					{{/if}}
-				</td>
-				<td>{{this.title}}</td>
-				<td>{{toDate this.createdAt}}</td>
-				<td>{{this.description}}</td>
-				<td>
-					{{#each this.phones}}
-						<p>{{this}}</p>
-					{{/each}}
-				</td>
-				<td>{{this.isRealtorScale}}</td>
+	<div class="table-responsive">
+		<table class="table">
+			<tbody>
+			<tr class="active">
+				<th>Link</th>
+				<th>Rooms</th>
+				<th>Price</th>
+				<th class="centered">Pics</th>
+				<th>Title</th>
+				<th>Created At</th>
+				<th class="centered">Description</th>
+				<th>Phones</th>
+				<th>IsAgent</th>
 			</tr>
-		{{/each}}
-		</tbody>
-	</table>
-	<div id="modal-container"></div>
+			{{#each flats}}
+				<tr class="{{getBackgroundColorClass this.isRealtorScale}}">
+					<td><a href="{{this.ref}}" target="_blank">{{this.ref}}</a></td>
+					<td>{{this.rooms}}</td>
+					<td>{{this.price}}</td>
+					<td class="centered">
+						{{#if this.pics}}
+							<img class="thumbnail" data-toggle="modal" data-target=".modal-carousel-{{@index}}" src="{{getThumbnail this.pics}}"/>
+							{{> modalCarousel id=@index pics=this.pics}}
+						{{else}}--
+						{{/if}}
+					</td>
+					<td>{{this.title}}</td>
+					<td>{{toDate this.createdAt}}</td>
+					<td>{{this.description}}</td>
+					<td>
+						{{#each this.phones}}
+							<p>{{this}}</p>
+						{{/each}}
+					</td>
+					<td class="centered">{{this.isRealtorScale}}</td>
+				</tr>
+			{{/each}}
+			</tbody>
+		</table>
+	</div>
 	<script	src="https://code.jquery.com/jquery-3.2.0.min.js" integrity="sha256-JAW99MJVpJBGcbzEuXk4Az05s/XyDdBomFqNlM3ic+I=" crossorigin="anonymous"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-	<!--<script>-->
-		<!--$('img.thumbnail').on('click', (e) => {-->
-		  <!--const img = e.target;-->
-		  <!--console.log(img.id);-->
-		  <!--img.setAttribute('data-target', `.modal-carousel-${img.id}`);-->
-		  <!--img.setAttribute('data-toggle', 'modal');-->
-		<!--});-->
-	<!--</script>-->
 </body>
 </html>

@@ -24,7 +24,7 @@ const Ad = mongoose.model('Ad', {
     required: true,
   },
   price: {
-    type: Number,
+    type: Object,
   },
   rooms: {
     type: Number,
