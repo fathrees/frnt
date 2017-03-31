@@ -64,14 +64,15 @@ const getAdContent = (ref) => {
       const rooms = + details.first().find('table.item strong').text();
       const wallType = details.last().find('table.item a').text().trim();
       const description = descriptionContent.last().text().trim();
-      let price = $('.price-label strong').text().replace(/\s/g, '').match(/(\d+)(.+)/);
-      price = { value: price[1], currency: price[2] };
-      if (price.currency === '€') {
-        price = price.value// todo currency
-      }
       const pics = getTagsAtr($('.photo-glow img'), 'src');
-      const content = { title, createdAt, rooms, wallType, description, price, pics };
-      resolve(content);
+      const content = { title, createdAt, rooms, wallType, description, pics };
+      let price = $('.price-label strong').text().replace(/\s/g, '').match(/(\d+)(.+)/);
+      if (price) {
+        getPriceInUAH(ref, { value: price[1], currency: price[2] }).then((resPrice) => {
+          content.price = resPrice;
+          resolve(content);
+        }).catch((e) => reject(e));
+      } else reject('Price was not found');
     });
   })
 };
@@ -95,6 +96,33 @@ const getPhones = (olxAdId) => {
           resolve(phones);
         }
       });
+  });
+};
+
+const getPriceInUAH = (ref, { value, currency }) => {
+  return new Promise((resolve, reject) => {
+    if (currency === 'грн.') {
+      resolve(+value);
+      return null;
+    }
+    const urlStart = 'https://query.yahooapis.com/v1/public/yql?q=select+*+from+yahoo.finance.xchange+where+pair+=+%22';
+    const urlEnd = '%22&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=';
+    let pair;
+    if (currency === '$') pair = 'USDUAH';
+    if (currency === '€') pair = 'EURUAH';
+    if (!pair) {
+      console.log(`Currency at ${ref} was not detected!`);
+      resolve(null);
+      return null;
+    }
+    request({ url: `${urlStart}${pair}${urlEnd}` }, (err, response, body) => {
+      if (err) {
+        reject(err);
+        return null;
+      }
+      const rate = JSON.parse(body).query.results.rate.Rate;
+      resolve(Math.round(value * rate));
+    });
   });
 };
 
